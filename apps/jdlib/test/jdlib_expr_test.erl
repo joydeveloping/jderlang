@@ -11,7 +11,7 @@
 
 % Functions import.
 -import(jdlib_expr,
-        [is_eq/2,
+        [is_eq/2, is_const/1, substitute/3,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
          neg/1, sum/2, sub/2, mul/2, dvs/2,
@@ -19,6 +19,40 @@
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
+%---------------------------------------------------------------------------------------------------
+
+-spec is_eq_test() -> ok.
+%% @doc
+%% Function is_eq test.
+is_eq_test() ->
+    ?assert(is_eq(x, x)),
+    ?assert(is_eq(1, 1.0)),
+    ?assert(is_eq({sum, [y, 5]}, {sum, [y, 5.0]})),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec is_const_test() -> ok.
+%% @doc
+%% Function is_const test.
+is_const_test() ->
+    ?assert(is_const(1)),
+    ?assert(not is_const(x)),
+    ?assert(is_const({sum, [{neg, 3}, {dvs, {1, 1}}]})),
+    ?assert(not is_const({sub, {{sum, [1, 2, 3]}, {mul, [1, x, 2]}}})),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec substitute_test() -> ok.
+%% @doc
+%% Function substitute test.
+substitute_test() ->
+    ?assertEqual({sum,
+                  [{neg, {dvs, {v, w}}}, {sub, {a, {dvs, {v, w}}}}, {mul, [1, {dvs, {v, w}}, b]}]},
+                 substitute({sum, [{neg, x}, {sub, {a, x}}, {mul, [1, x, b]}]}, x, {dvs, {v, w}})),
+    ok.
+
 %---------------------------------------------------------------------------------------------------
 
 -spec rule_normalization_test() -> ok.

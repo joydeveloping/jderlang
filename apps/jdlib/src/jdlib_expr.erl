@@ -17,7 +17,7 @@
 
 % Export.
 -export([neg/1, sum/2, sum/1, sub/2, mul/2, mul/1, dvs/2,
-         is_eq/2,
+         is_eq/2, is_const/1, substitute/3, to_string/1,
          simplify/1, simplify/2,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2]).
@@ -110,6 +110,8 @@ sum(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 -spec sum(L :: exprs_list()) -> expr().
 %% @doc
 %% Sum constructor.
+sum([]) ->
+    throw({badarg, []});
 sum(L) when is_list(L) ->
     simplify({sum, L}).
 
@@ -134,6 +136,8 @@ mul(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 -spec mul(L :: exprs_list()) -> expr().
 %% @doc
 %% Mul constructor.
+mul([]) ->
+    throw({badarg, []});
 mul(L) when is_list(L) ->
     simplify({mul, L}).
 
@@ -146,7 +150,7 @@ dvs(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
     simplify({dvs, {X, Y}}).
 
 %---------------------------------------------------------------------------------------------------
-% Check equality.
+% Expression functions.
 %---------------------------------------------------------------------------------------------------
 
 -spec is_eq(E1 :: expr(), E2 :: expr()) -> boolean().
@@ -169,6 +173,68 @@ is_eq({Oper, L1}, {Oper, L2}) when (?IS_MULTINARY(Oper)
     lists:all(fun({X1, X2}) -> is_eq(X1, X2) end, lists:zip(L1, L2));
 is_eq(_, _) ->
     false.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec is_const(E :: expr()) -> boolean().
+%% @doc
+%% Check if expression is constant.
+is_const({Oper, X}) when ?IS_UNARY(Oper) ->
+    is_const(X);
+is_const({Oper, {X, Y}}) when ?IS_BINARY(Oper) ->
+    is_const(X) andalso is_const(Y);
+is_const({Oper, L}) when ?IS_MULTINARY(Oper) ->
+    lists:all(fun is_const/1, L);
+is_const(E) ->
+    is_number(E).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec substitute(E :: expr(), A :: atom(), S :: expr()) -> expr().
+%% @doc
+%% Substiture atom A with expression S.
+substitute({Oper, X}, A, S) when ?IS_UNARY(Oper) ->
+    {Oper, substitute(X, A, S)};
+substitute({Oper, {X, Y}}, A, S) when ?IS_BINARY(Oper) ->
+    {Oper, {substitute(X, A, S), substitute(Y, A, S)}};
+substitute({Oper, L}, A, S) when ?IS_MULTINARY(Oper) ->
+    {Oper, lists:map(fun(E) -> substitute(E, A, S) end, L)};
+substitute(A, A, S) ->
+    S;
+substitute(E, _, _) ->
+    E.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec to_string(E :: expr()) -> string().
+%% @doc
+%% Convert expression to string.
+to_string({neg, X}) ->
+    "(" ++ to_string(X) ++ ")";
+to_string({sum, [H | T]}) ->
+    Next_Component_F =
+        fun
+            ({neg, [E]}) ->
+                " - " ++ to_string(E);
+            (E) ->
+                " + " ++ to_string(E)
+        end,
+    "("
+    ++ to_string(H)
+    ++ lists:append(lists:map(Next_Component_F, T))
+    ++ ")";
+to_string({sub, {X, Y}}) ->
+    "(" ++ to_string(X) ++ " - " ++ to_string(Y) ++ ")";
+to_string({mul, [H | T]}) ->
+    Next_Factor_F = fun(E) -> " * " ++ to_string(E) end,
+    "("
+    ++ to_string(H)
+    ++ lists:append(lists:map(Next_Factor_F, T))
+    ++ ")";
+to_string({dvs, {X, Y}}) ->
+    "(" ++ to_string(X) ++ " / " ++ to_string(Y) ++ ")";
+to_string(X) ->
+    lists:flatten(io_lib:format("~w", [X])).
 
 %---------------------------------------------------------------------------------------------------
 % Options.
