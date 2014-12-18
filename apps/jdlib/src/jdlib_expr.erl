@@ -4,7 +4,6 @@
 %% <ul>
 %% <b>The following operations is supported:</b>
 %%   <li><tt>neg</tt> - negate (<tt>x</tt> -> <tt>-x</tt>)</li>
-%%   <li><tt>inv</tt> - invert (<tt>x</tt> -> <tt>1 / x</tt>)</li>
 %%   <li><tt>sum</tt> - sum of expressions list (<tt>x + y + ...</tt>)</li>
 %%   <li><tt>sub</tt> - subtraction of two values (<tt>x - y</li>)</li>
 %%   <li><tt>mul</tt> - multiplication of expressions list (<tt>x * y * ...</tt>)</li>
@@ -17,10 +16,11 @@
 -module(jdlib_expr).
 
 % Export.
--export([neg/1, inv/1, sum/2, sub/2, mul/2, dvs/2,
+-export([neg/1, sum/2, sum/1, sub/2, mul/2, mul/1, dvs/2,
          is_eq/2,
-         simplify/1,
-         rule_normalization/2, rule_calculation/2]).
+         simplify/1, simplify/2,
+         rule_normalization/1, rule_normalization/2,
+         rule_calculation/1, rule_calculation/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -46,7 +46,7 @@
 -define(IS_EXPR(X), (?IS_TRIVIAL(X) orelse is_float(X) orelse is_tuple(X))).
 
 % Check if oper unary.
--define(IS_UNARY(OPER), ((OPER =:= neg) orelse (OPER =:= inv))).
+-define(IS_UNARY(OPER), (OPER =:= neg)).
 
 % Check if oper binary.
 -define(IS_BINARY(OPER), ((OPER =:= sub) orelse (OPER =:= dvs))).
@@ -64,7 +64,7 @@
               options/0]).
 
 % Unary operation.
--type unary_operation() :: neg | inv.
+-type unary_operation() :: neg.
 
 % Binary operation.
 -type binary_operation() :: sub | dvs.
@@ -81,6 +81,9 @@
                 | {binary_operation(), {expr(), expr()}}
                 | {multinary_operation(), [expr()]}.
 
+% Expressions list.
+-type exprs_list() :: [expr()].
+
 % Options.
 -type options() :: #{}.
 
@@ -96,19 +99,19 @@ neg(X) when ?IS_EXPR(X) ->
 
 %---------------------------------------------------------------------------------------------------
 
--spec inv(X :: expr()) -> expr().
-%% @doc
-%% Invert constructor.
-inv(X) when ?IS_EXPR(X) ->
-    simplify({inv, X}).
-
-%---------------------------------------------------------------------------------------------------
-
 -spec sum(X :: expr(), Y :: expr()) -> expr().
 %% @doc
 %% Sum constructor.
 sum(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
     simplify({sum, [X, Y]}).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec sum(L :: exprs_list()) -> expr().
+%% @doc
+%% Sum constructor.
+sum(L) when is_list(L) ->
+    simplify({sum, L}).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -125,6 +128,14 @@ sub(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 %% Mul constructor.
 mul(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
     simplify({mul, [X, Y]}).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec mul(L :: exprs_list()) -> expr().
+%% @doc
+%% Mul constructor.
+mul(L) when is_list(L) ->
+    simplify({mul, L}).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -145,6 +156,8 @@ dvs(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 %% E1 is equal to E2 without simplification effect.
 %% So {sum, [a, b]} is not equal to {sum, [b, a]},
 %% but {neg, 1} is equal to {neg, 1.0}.
+is_eq(E, E) when is_atom(E) ->
+    true;
 is_eq(E1, E2) when (is_number(E1) andalso is_number(E2)) ->
     ?IS_EQ(E1, E2);
 is_eq({Oper, X1}, {Oper, X2}) when ?IS_UNARY(Oper) ->
@@ -158,6 +171,24 @@ is_eq(_, _) ->
     false.
 
 %---------------------------------------------------------------------------------------------------
+% Options.
+%---------------------------------------------------------------------------------------------------
+
+-spec default_options() -> options().
+%% @doc
+%% Get default options.
+default_options() ->
+    #{
+        % Calculate fractions.
+        % It can lead to loss of precision, for example in expression 1 / 3.
+        is_calc_frac => true,
+
+        % Ignore division by zero exception.
+        % It allows us to apply such optimizations as x / x = 1.
+        is_ignore_dbz => true
+    }.
+
+%---------------------------------------------------------------------------------------------------
 % Simplification functions.
 %---------------------------------------------------------------------------------------------------
 
@@ -165,21 +196,7 @@ is_eq(_, _) ->
 %% @doc
 %% Expression simplification.
 simplify(E) ->
-    simplify
-    (
-        E,
-
-        % Options.
-        #{
-            % Calculate fractions.
-            % It can lead to loss of precision, for example in expression 1 / 3.
-            is_calc_frac => true,
-
-            % Ignore division by zero exception.
-            % It allows us to apply such optimizations as x / x = 1.
-            is_ignore_dbz => true
-        }
-    ).
+    simplify(E, default_options()).
 
 -spec simplify(E :: expr(), Opts :: options()) -> expr().
 %% @private
@@ -231,6 +248,12 @@ rules(E, Opts) ->
 
 %---------------------------------------------------------------------------------------------------
 
+-spec rule_normalization(E :: expr()) -> expr().
+%% @doc
+%% Normalization rule.
+rule_normalization(E) ->
+    rule_normalization(E, default_options()).
+
 -spec rule_normalization(E :: expr(), Opts :: options()) -> expr().
 %% @doc
 %% Normalization rule.
@@ -249,9 +272,12 @@ rule_normalization(E, _) when is_float(E) ->
     end;
 
 % Multinary operations are to flatten:
-%   {sum, [a, b, c, {sum, [x, y, z]}]} -> {sum, [a, b, c, x, y, z]},
-%   {mul, [a, b, c, {sum, [x, y, z]}]} -> {mul, [a, b, c, x, y, z]},
+%   {sum, [a, b, c, {sum, [x, y, z]}]} -> {sum, [a, b, c, x, y, z]}
+%   {mul, [a, b, c, {sum, [x, y, z]}]} -> {mul, [a, b, c, x, y, z]}
 % and arguments are sorted.
+% If there is only one argument, we do not need operation:
+%   {sum, [x]} -> x
+%   {mul, [x]} -> x
 rule_normalization({Oper, L}, _) when ?IS_MULTINARY(Oper) ->
     {Same_Oper_Exprs, Other_Opers_Exprs} =
         lists:partition
@@ -274,88 +300,118 @@ rule_normalization({Oper, L}, _) when ?IS_MULTINARY(Oper) ->
             end,
             [], Same_Oper_Exprs
         ),
-    {Oper, lists:sort(lists:append(Other_Opers_Exprs, New_Args))};
+    Sorted_Args = lists:sort(lists:append(Other_Opers_Exprs, New_Args)),
+    case Sorted_Args of
+        [Single_Arg] ->
+            Single_Arg;
+        _ ->
+            {Oper, Sorted_Args}
+    end;
 rule_normalization(E, _) ->
     E.
 
 %---------------------------------------------------------------------------------------------------
+
+-spec rule_calculation(E :: expr()) -> expr().
+%% @doc
+%% Calculate numeric expressions.
+rule_calculation(E) ->
+    rule_calculation(E, default_options()).
 
 -spec rule_calculation(E :: expr(), Opts :: options()) -> expr().
 %% @doc
 %% Calculate numeric expressions.
 rule_calculation({neg, X}, _) when is_number(X) ->
     -X;
-rule_calculation({inv, X} = E, #{is_calc_frac := Is_Calc_Frac}) when is_number(X) ->
-    if
-        % Exact value.
-        X =:= 1 ->
-            1;
-        X =:= -1 ->
-            -1;
-
-        % Division by zero.
-        X =:= 0 ->
-            throw({dbz, 0});
-
-        % Calculate fraction.
-        Is_Calc_Frac orelse is_float(X) ->
-            1 / X;
-
-        % Do not calculate.
-        true ->
-            E
-    end;
 rule_calculation({sum, Args}, _) ->
     {Numbers, Exprs} = lists:partition(fun(X) -> is_number(X) end, Args),
     Value = lists:sum(Numbers),
     if
-        % Only numeric members.
+        % Only numeric part.
         Exprs =:= [] ->
             Value;
 
-        % There are non numeric members and value.
+        % No numeric part.
+        Value == 0 ->
+            {sum, Exprs};
+
+        % Numeric and symbol part.
         Value /= 0 ->
-            {sum, lists:sort([Value | Exprs])};
-
-        % Now we know Value == 0.
-        % Check one case when list of expressions is single expression.
-        length(Exprs) =:= 1 ->
-            [H] = Exprs,
-            H;
-
-        true ->
-            {sum, lists:sort(Exprs)}
+            {sum, [Value | Exprs]}
     end;
-rule_calculation({sub, Args}, _) ->
-    % TODO
-    {sub, Args};
+rule_calculation({sub, {X, Y}} = E, _) ->
+    if
+        X =:= Y ->
+            0;
+        is_number(X) andalso is_number(Y) ->
+            X - Y;
+        X == 0 ->
+            {neg, Y};
+        Y == 0 ->
+            X;
+        true ->
+            E
+    end;
 rule_calculation({mul, Args}, _) ->
     {Numbers, Exprs} = lists:partition(fun(X) -> is_number(X) end, Args),
     Value = lists:foldl(fun(X, Cur) -> X * Cur end, 1, Numbers),
     if
-        % Only numeric members.
+        % Only numeric part.
         Exprs =:= [] ->
             Value;
 
-        % There are non numeric members and value.
-        Value /= 1 ->
-            {mul, lists:sort([Value | Exprs])};
+        % Multiplication by zero.
+        Value == 0 ->
+            0;
 
-        % TODO:
-        % We have to handle special case Value == 0.
+        % No numeric part.
+        Value == 1 ->
+            {mul, Exprs};
 
-        % Now we know Value == 1.
-        % Check one case when list of expressions is single expression.
-        length(Exprs) =:= 1 ->
-            [H] = Exprs,
-            H;
-
+        % Numeric and symbol parts.
         true ->
-            {mul, lists:sort(Exprs)}
+            {mul, [Value | Exprs]}
     end;
-rule_calculation({dvs, Args}, _) ->
-    % TODO
-    {dvs, Args};
+rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
+                                      is_ignore_dbz := Is_Ignore_DBZ}) ->
+    if
+        % We can not process this exception.
+        Y == 0 ->
+            throw({dbz, E});
+
+        % Numbers and Y /= 0.
+        % We have a chance to calculate it.
+        is_number(X) andalso is_number(Y) ->
+
+            D = X / Y,
+
+            if
+                is_float(X) orelse is_float(Y) orelse Is_Calc_Frac ->
+                    D;
+
+                % X and Y are integers.
+                % But we can try to calculate if result is integer.
+                trunc(D) == D ->
+                    D;
+
+                true ->
+                    E
+            end;
+
+        (X == 0) andalso Is_Ignore_DBZ ->
+            0;
+
+        % Can not calculate.
+        true ->
+            Is_Eq = is_eq(X, Y),
+
+            if
+                Is_Eq andalso Is_Ignore_DBZ ->
+                    1;
+                true ->
+                    E
+            end
+    end;
 rule_calculation(E, _) ->
     E.
 

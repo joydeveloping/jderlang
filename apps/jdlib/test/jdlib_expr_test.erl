@@ -11,9 +11,11 @@
 
 % Functions import.
 -import(jdlib_expr,
-        [neg/1, inv/1, sum/2, sub/2, mul/2, dvs/2,
-         is_eq/2,
-         rule_normalization/2, rule_calculation/2]).
+        [is_eq/2,
+         rule_normalization/1, rule_normalization/2,
+         rule_calculation/1, rule_calculation/2,
+         neg/1, sum/2, sub/2, mul/2, dvs/2,
+         simplify/1, simplify/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -25,17 +27,17 @@
 rule_normalization_test() ->
 
     % Float normalization.
-    ?assertEqual(5, rule_normalization(5.0, #{})),
+    ?assertEqual(5, rule_normalization(5.0)),
 
     % Multinary operation normalization.
     ?assertEqual({sum, [a, b, c, x, y, z]},
-                 rule_normalization({sum, [a, b, c, {sum, [x, y, z]}]}, #{})),
+                 rule_normalization({sum, [a, b, c, {sum, [x, y, z]}]})),
     ?assertEqual({sum, [a, b, c, x, y, z]},
-                 rule_normalization({sum, [c, {sum, [z, y, x]}, b, a]}, #{})),
+                 rule_normalization({sum, [c, {sum, [z, y, x]}, b, a]})),
     ?assertEqual({mul, [a, b, c, x, y, z]},
-                 rule_normalization({mul, [c, {mul, [z, y, x]}, b, a]}, #{})),
+                 rule_normalization({mul, [c, {mul, [z, y, x]}, b, a]})),
     ?assertEqual({sum, [a, b, c, d, e, f, g]},
-                 rule_normalization({sum, [b, e, g, a, d, f, c]}, #{})),
+                 rule_normalization({sum, [b, e, g, a, d, f, c]})),
 
     ok.
 
@@ -47,33 +49,43 @@ rule_normalization_test() ->
 rule_calculation_test() ->
 
     % Neg.
-    ?assertEqual(-5, rule_calculation({neg, 5}, #{})),
-    ?assertEqual(5, rule_calculation({neg, -5}, #{})),
-    ?assertEqual({neg, x}, rule_calculation({neg, x}, #{})),
-
-    % Inv.
-    ?assertEqual(1, rule_calculation({inv, 1}, #{is_calc_frac => true})),
-    ?assertEqual(-1, rule_calculation({inv, -1}, #{is_calc_frac => true})),
-    ?assertThrow({dbz, _}, rule_calculation({inv, 0}, #{is_calc_frac => true})),
-    ?assert(is_eq(rule_calculation({inv, 3}, #{is_calc_frac => true}), 1.0 / 3.0)),
-    ?assertEqual(1, rule_calculation({inv, 1}, #{is_calc_frac => false})),
-    ?assertEqual(-1, rule_calculation({inv, -1}, #{is_calc_frac => false})),
-    ?assertThrow({dbz, _}, rule_calculation({inv, 0}, #{is_calc_frac => false})),
-    ?assertEqual({inv, 3}, rule_calculation({inv, 3}, #{is_calc_frac => false})),
-    ?assertEqual({inv, x}, rule_calculation({inv, x}, #{})),
+    ?assertEqual(-5, rule_calculation({neg, 5})),
+    ?assertEqual(5, rule_calculation({neg, -5})),
+    ?assertEqual({neg, x}, rule_calculation({neg, x})),
 
     % Sum.
-    ?assertEqual(10, rule_calculation({sum, [2, 3, 1, 4]}, #{})),
-    ?assertEqual(0, rule_calculation({sum, [2, -2]}, #{})),
-    ?assertEqual(x, rule_calculation({sum, [2, x, -2]}, #{})),
+    ?assertEqual(10, rule_calculation({sum, [2, 3, 1, 4]})),
+    ?assertEqual(0, rule_calculation({sum, [2, -2]})),
+    ?assertEqual({sum, [x]}, rule_calculation({sum, [-2, x, 2]})),
 
     % Sub.
+    ?assertEqual(4, rule_calculation({sub, {10, 6}})),
+    ?assertEqual({sub, {a, b}}, rule_calculation({sub, {a, b}})),
+    ?assertEqual(0, rule_calculation({sub, {x, x}})),
 
     % Mul.
-    ?assertEqual(24, rule_calculation({mul, [2, 3, 1, 4]}, #{})),
-    ?assertEqual(x, rule_calculation({mul, [2, x, 0.5]}, #{})),
+    ?assertEqual(24, rule_calculation({mul, [2, 3, 1, 4]})),
+    ?assertEqual(0, rule_calculation({mul, [2, 3, 0, 4]})),
+    ?assertEqual(0, rule_calculation({mul, [x, y, 0, z]})),
 
     % Dvs.
+    ?assertEqual({dvs, {2, 4}}, rule_calculation({dvs, {2, 4}},
+                                                 #{is_calc_frac => false, is_ignore_dbz => true})),
+    ?assert(is_eq(0.5, rule_calculation({dvs, {2, 4}},
+                                        #{is_calc_frac => true, is_ignore_dbz => true}))),
+    ?assert(is_eq(2, rule_calculation({dvs, {4, 2}},
+                                      #{is_calc_frac => false, is_ignore_dbz => true}))),
+    ?assertThrow({dbz, _}, rule_calculation({dvs, {1, 0}})),
+    ?assertThrow({dbz, _}, rule_calculation({dvs, {0, 0}})),
+    ?assertThrow({dbz, _}, rule_calculation({dvs, {x, 0}})),
+    ?assertEqual(1, rule_calculation({dvs, {x, x}},
+                                     #{is_calc_frac => true, is_ignore_dbz => true})),
+    ?assertEqual({dvs, {x, x}}, rule_calculation({dvs, {x, x}},
+                                                 #{is_calc_frac => true, is_ignore_dbz => false})),
+    ?assertEqual(0, rule_calculation({dvs, {0, x}},
+                                     #{is_calc_frac => true, is_ignore_dbz => true})),
+    ?assertEqual({dvs, {0, x}}, rule_calculation({dvs, {0, x}},
+                                                 #{is_calc_frac => true, is_ignore_dbz => false})),
 
     ok.
 
@@ -86,21 +98,6 @@ neg_test() ->
     ?assertEqual(-5, neg(5)),
     ?assertEqual(5, neg(-5)),
     ?assertEqual({neg, x}, neg(x)),
-    ok.
-
-%---------------------------------------------------------------------------------------------------
-
--spec inv_test() -> ok.
-%% @doc
-%% Function inv test.
-inv_test() ->
-    ?assertEqual(1, inv(1)),
-    ?assertEqual(-1, inv(-1)),
-    ?assertThrow({dbz, _}, inv(0)),
-    ?assertEqual(1, inv(1.0)),
-    ?assertEqual(-1, inv(-1.0)),
-    ?assertThrow({dbz, _}, inv(0.0)),
-    ?assertEqual({inv, x}, inv(x)),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -121,6 +118,10 @@ sum_test() ->
 %% @doc
 %% Function sub test.
 sub_test() ->
+    ?assertEqual({sub, {x, y}}, sub(x, y)),
+    ?assertEqual({neg, x}, sub(0, x)),
+    ?assertEqual(x, sub(x, 0)),
+    ?assertEqual(0, sub(x, x)),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -129,6 +130,11 @@ sub_test() ->
 %% @doc
 %% Function mul test.
 mul_test() ->
+    ?assertEqual({mul, [x, y]}, mul(x, y)),
+    ?assertEqual(x, mul(x, 1)),
+    ?assertEqual(x, mul(1, x)),
+    ?assertEqual(0, mul(0, x)),
+    ?assertEqual(0, mul(x, 0)),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -137,6 +143,29 @@ mul_test() ->
 %% @doc
 %% Function dvs test.
 dvs_test() ->
+    ?assertEqual(5, dvs(10, 2)),
+    ?assertEqual(1, dvs(x, x)),
+    ?assertEqual(0, dvs(0, x)),
+    ?assertThrow({dbz, _}, dvs(x, 0)),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+% Simplify function test.
+%---------------------------------------------------------------------------------------------------
+
+-spec simplify_test() -> ok.
+%% @doc
+%% Function simplify test.
+simplify_test() ->
+
+    % Simplify sum.
+    % sum(2, x, -2) -> sum(x) -> x
+    ?assertEqual(x, simplify({sum, [2, x, -2]})),
+
+    % Simplify mul.
+    % mul(2, x, 0.5) -> mul(x) -> x
+    ?assertEqual(x, simplify({mul, [2, x, 0.5]})),
+
     ok.
 
 %---------------------------------------------------------------------------------------------------
