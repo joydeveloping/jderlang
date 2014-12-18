@@ -14,6 +14,7 @@
         [is_eq/2, is_const/1, substitute/3,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
+         rule_open_brackets/1, rule_open_brackets/2,
          neg/1, sum/2, sub/2, mul/2, dvs/2,
          simplify/1, simplify/2]).
 
@@ -121,6 +122,22 @@ rule_calculation_test() ->
     ?assertEqual({dvs, {0, x}}, rule_calculation({dvs, {0, x}},
                                                  #{is_calc_frac => true, is_ignore_dbz => false})),
 
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_open_brackets_test() -> ok.
+%% @doc
+%% Function rule_open_brackets test.
+rule_open_brackets_test() ->
+    ?assertEqual(x, rule_open_brackets({neg, {neg, x}})),
+    ?assertEqual({sub, {y, x}}, rule_open_brackets({neg, {sub, {x, y}}})),
+    ?assertEqual({sum, [a, b, d, e, {neg, c}, {neg, f}]},
+                 rule_normalization(rule_open_brackets({sum, [a, {sub, {b, c}}, d,
+                                                              {sub, {e, f}}]}))),
+    ?assertEqual({sum, [x, y]}, rule_open_brackets({sub, {x, {neg, y}}})),
+    ?assertEqual({sub, {{sum, [x, b]}, a}}, rule_open_brackets({sub, {x, {sub, {a, b}}}})),
+    ?assertEqual({neg, {sum, [x, y]}}, rule_open_brackets({sub, {{neg, x}, y}})),
     ok.
 
 %---------------------------------------------------------------------------------------------------

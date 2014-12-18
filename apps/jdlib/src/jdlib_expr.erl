@@ -20,7 +20,8 @@
          is_eq/2, is_const/1, substitute/3, to_string/1,
          simplify/1, simplify/2,
          rule_normalization/1, rule_normalization/2,
-         rule_calculation/1, rule_calculation/2]).
+         rule_calculation/1, rule_calculation/2,
+         rule_open_brackets/1, rule_open_brackets/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -210,7 +211,7 @@ substitute(E, _, _) ->
 %% @doc
 %% Convert expression to string.
 to_string({neg, X}) ->
-    "(" ++ to_string(X) ++ ")";
+    "(-" ++ to_string(X) ++ ")";
 to_string({sum, [H | T]}) ->
     Next_Component_F =
         fun
@@ -308,7 +309,8 @@ rules(E, Opts) ->
     Rules =
         [
             rule_normalization,
-            rule_calculation
+            rule_calculation,
+            rule_open_brackets
         ],
     lists:foldl(fun(Rule, Cur_E) -> apply(jdlib_expr, Rule, [Cur_E, Opts]) end, E, Rules).
 
@@ -479,6 +481,59 @@ rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
             end
     end;
 rule_calculation(E, _) ->
+    E.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_open_brackets(E :: expr()) -> expr().
+%% @doc
+%% Open brackets in expression.
+%% -(-x) -> x
+%% -(x - y) -> y - x
+%% x + (a - b) -> x + a + (-b)
+%% x - (-y) -> x + y
+%% x - (a - b) -> (x + b) - a
+%% (-x) - y -> -(x + y)
+rule_open_brackets(E) ->
+    rule_open_brackets(E, default_options()).
+
+-spec rule_open_brackets(E :: expr(), Opts :: options()) -> expr().
+%% @doc
+%% Open brackets in expression.
+rule_open_brackets({neg, {neg, E}}, _) ->
+    E;
+rule_open_brackets({neg, {sub, {X, Y}}}, _) ->
+    {sub, {Y, X}};
+rule_open_brackets({sum, L}, _) ->
+    {Sub_Exprs, Exprs} =
+        lists:partition
+        (
+            fun(X) ->
+                case X of
+                    {sub, _} ->
+                        true;
+                    _ ->
+                        false
+                end
+            end,
+            L
+        ),
+    New_Args =
+        lists:foldl
+        (
+            fun({sub, {X, Y}}, Cur_Args) ->
+                lists:append(Cur_Args, [X, {neg, Y}])
+            end,
+            [], Sub_Exprs
+        ),
+    {sum, lists:append(Exprs, New_Args)};
+rule_open_brackets({sub, {X, {neg, Y}}}, _) ->
+    {sum, [X, Y]};
+rule_open_brackets({sub, {X, {sub, {A, B}}}}, _) ->
+    {sub, {{sum, [X, B]}, A}};
+rule_open_brackets({sub, {{neg, X}, Y}}, _) ->
+    {neg, {sum, [X, Y]}};
+rule_open_brackets(E, _) ->
     E.
 
 %---------------------------------------------------------------------------------------------------
