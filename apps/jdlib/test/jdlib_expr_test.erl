@@ -11,14 +11,16 @@
 
 % Functions import.
 -import(jdlib_expr,
-        [is_eq/2, is_const/1, is_polynomial/1, substitute/3,
+        [is_eq/2, is_const/1, is_polynomial/1,
+         substitute/3,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
          rule_open_brackets/1, rule_open_brackets/2,
          rule_collect_negs/1, rule_collect_negs/2,
          rule_split_sum/1, rule_split_sum/2,
          neg/1, sum/2, sub/2, mul/2, dvs/2, pow/2,
-         simplify/1, simplify/2]).
+         simplify/1, simplify/2,
+         expand_mul/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -280,6 +282,14 @@ simplify_test() ->
     % mul(2, x, 0.5) -> mul(x) -> x
     ?assertEqual(x, simplify({mul, [2, x, 0.5]})),
 
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec expand_mul_test() -> ok.
+%% @doc
+%% Expand mul operation.
+expand_mul_test() ->
     ok.
 
 %---------------------------------------------------------------------------------------------------

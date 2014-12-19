@@ -25,6 +25,7 @@
          simplify/1, simplify/2,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
+         rule_collect_items/1, rule_collect_items/2,
          rule_open_brackets/1, rule_open_brackets/2,
          rule_collect_negs/1, rule_collect_negs/2,
          rule_split_sum/1, rule_split_sum/2]).
@@ -329,6 +330,14 @@ expand_mul({mul, [H | T]}) ->
             T
         ),
     simplify({sum, New_Items});
+expand_mul({pow, {X, P}} = E) when is_integer(P) ->
+    Is_Expand = is_sum(X) orelse is_sub(X),
+    if
+        Is_Expand ->
+            {mul, lists:duplicate(P, X)};
+        true ->
+            E
+    end;
 expand_mul(E) ->
     E.
 
@@ -403,9 +412,6 @@ simplify(E, _) when ?IS_TRIVIAL(E) ->
 simplify(E, Opts) when is_float(E) ->
     rules(E, Opts);
 simplify({Oper, Args} = E, Opts) ->
-
-    io:format("~p~n", [E]),
-
     % First try to apply simplification to nested expressions.
     Simp_Args =
         if
@@ -444,6 +450,7 @@ rules(E, Opts) ->
         [
             rule_normalization,
             rule_calculation,
+            rule_collect_items,
             rule_open_brackets,
             rule_collect_negs,
             rule_split_sum
@@ -510,6 +517,48 @@ rule_normalization({Oper, L}, _) when ?IS_MULTINARY(Oper) ->
             {Oper, Sorted_Args}
     end;
 rule_normalization(E, _) ->
+    E.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_collect_items(E :: expr()) -> expr().
+%% @doc
+%% Collect items for sum and mul operation.
+rule_collect_items(E) ->
+    rule_collect_items(E, default_options()).
+
+-spec rule_collect_items(E :: expr(), Opts :: options()) -> expr().
+%% @doc
+%% Collect items for sum and mul operation.
+rule_collect_items({sum, L}, _) ->
+    H = jdlib_lists:sorted_histogram(L),
+    New_L =
+        lists:map
+        (
+            fun
+                ({X, 1}) ->
+                    X;
+                ({X, C}) ->
+                    {mul, [C, X]}
+            end,
+            H
+        ),
+    {sum, New_L};
+rule_collect_items({mul, L}, _) ->
+    H = jdlib_lists:sorted_histogram(L),
+    New_L =
+        lists:map
+        (
+            fun
+                ({X, 1}) ->
+                    X;
+                ({X, C}) ->
+                    {pow, {X, C}}
+            end,
+            H
+        ),
+    {mul, New_L};
+rule_collect_items(E, _) ->
     E.
 
 %---------------------------------------------------------------------------------------------------
@@ -641,6 +690,8 @@ rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
 %   0^x => 0 (is_ignore_indef)
 %   x^0 => 1 (is_ignore_indef)
 %   x^1 => x
+rule_calculation({pow, {{pow, {X, N}}, M}}, _) when (is_number(N) andalso is_number(M)) ->
+    {pow, {X, N * M}};
 rule_calculation({pow, {X, Y}} = E, #{is_ignore_indef := Is_Ignore_Indef}) ->
     if
         ?IS_EQ(X, 0) ->
