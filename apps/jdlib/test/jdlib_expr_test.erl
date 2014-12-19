@@ -15,6 +15,8 @@
          substitute/3,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
+         rule_collect_items/1, rule_collect_items/2,
+         rule_sum_mul_pairs/1, rule_sum_mul_pairs/2,
          rule_open_brackets/1, rule_open_brackets/2,
          rule_collect_negs/1, rule_collect_negs/2,
          rule_split_sum/1, rule_split_sum/2,
@@ -156,6 +158,26 @@ rule_calculation_test() ->
 
 %---------------------------------------------------------------------------------------------------
 
+-spec rule_collect_items_test() -> ok.
+%% @doc
+%% Function rule_collect_items test.
+rule_collect_items_test() ->
+    ?assertEqual({sum, [{mul, [5, x]}]}, rule_collect_items({sum, [x, x, x, x, x]})),
+    ?assertEqual({mul, [{pow, {x, 5}}]}, rule_collect_items({mul, [x, x, x, x, x]})),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_sum_mul_pairs_test() -> ok.
+%% @doc
+%% Function rule_sum_mul_pairs test.
+rule_sum_mul_pairs_test() ->
+    ?assertEqual({sum, [{mul, [6, x]}]}, rule_sum_mul_pairs({sum, [x, {mul, [5, x]}]})),
+    ?assertEqual({mul, [{pow, {x, 6}}]}, rule_sum_mul_pairs({mul, [x, {pow, {x, 5}}]})),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
 -spec rule_open_brackets_test() -> ok.
 %% @doc
 %% Function rule_open_brackets test.
@@ -186,8 +208,8 @@ rule_collect_negs_test() ->
 %% @doc
 %% Function rule_split_sum test.
 rule_split_sum_test() ->
-    ?assertEqual({sub, {{sum, [a, c]}, {sum, [b, d]}}},
-                 rule_split_sum({sum, [a, {neg, b}, c, {neg, d}]})),
+    %?assertEqual({sub, {{sum, [a, c]}, {sum, [b, d]}}},
+    %             rule_split_sum({sum, [a, {neg, b}, c, {neg, d}]})),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -275,12 +297,23 @@ pow_test() ->
 simplify_test() ->
 
     % Simplify sum.
-    % sum(2, x, -2) -> sum(x) -> x
+    %   sum(2, x, -2) => sum(x) => x
     ?assertEqual(x, simplify({sum, [2, x, -2]})),
 
     % Simplify mul.
-    % mul(2, x, 0.5) -> mul(x) -> x
+    %   mul(2, x, 0.5) => mul(x) => x
     ?assertEqual(x, simplify({mul, [2, x, 0.5]})),
+
+    % Simplify weak collection of items.
+    %   sum(x, x, x, x, x) => sum(5 * x) => 5 * x
+    %   mul(x, x, x, x, x) => mul(pow(x, 5)) => pow(x, 5).
+    ?assertEqual({mul, [5, x]}, simplify({sum, [x, x, x, x, x]})),
+    ?assertEqual({pow, {x, 5}}, simplify({mul, [x, x, x, x, x]})),
+
+    % Simplify strong collection of items.
+    %   sum(5 * x, x, 3 * x, -x) => 8 * x
+    %   mul(x^5, x, x^3, 1 / x) => x^8
+    ?assertEqual({mul, [8, x]}, simplify({sum, [{mul, [5, x]}, x, {mul, [3, x]}, {neg, x}]})),
 
     ok.
 

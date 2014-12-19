@@ -11,7 +11,7 @@
 
 % Functions import.
 -import(jdlib_lists,
-        [count/2, sorted_histogram/1]).
+        [count/2, sorted_histogram/1, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -37,6 +37,20 @@ sorted_histogram_test() ->
     ?assertEqual([{1, 1}, {2, 1}, {3, 1}], sorted_histogram([1, 2, 3])),
     ?assertEqual([{1, 2}, {2, 2}, {3, 2}], sorted_histogram([1, 2, 3, 1, 2, 3])),
     ?assertEqual([{1, 3}, {2, 3}], sorted_histogram([2, 2, 2, 1, 1, 1])),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec apply_to_any_pair_test() -> ok.
+%% @doc
+%% Function apply_to_any_pair test.
+apply_to_any_pair_test() ->
+    ?assertEqual(false, apply_to_any_pair([], fun(_, _) -> {true, 0} end)),
+    ?assertEqual(false, apply_to_any_pair([x, y, 1, 2], fun(_, _) -> false end)),
+    ?assertEqual({true, 3, 4, 7}, apply_to_any_pair([3, 4, 5], fun(X, Y) -> {true, X + Y} end)),
+    ?assertEqual({true, w, w, true},
+                 apply_to_any_pair([1, 2, 3, a, b, c, 4, 5, w, x, y, w],
+                                   fun(X, Y) -> if X =:= Y -> {true, true}; true -> false end end)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

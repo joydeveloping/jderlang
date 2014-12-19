@@ -26,6 +26,7 @@
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
          rule_collect_items/1, rule_collect_items/2,
+         rule_sum_mul_pairs/1, rule_sum_mul_pairs/2,
          rule_open_brackets/1, rule_open_brackets/2,
          rule_collect_negs/1, rule_collect_negs/2,
          rule_split_sum/1, rule_split_sum/2]).
@@ -412,6 +413,7 @@ simplify(E, _) when ?IS_TRIVIAL(E) ->
 simplify(E, Opts) when is_float(E) ->
     rules(E, Opts);
 simplify({Oper, Args} = E, Opts) ->
+
     % First try to apply simplification to nested expressions.
     Simp_Args =
         if
@@ -451,9 +453,12 @@ rules(E, Opts) ->
             rule_normalization,
             rule_calculation,
             rule_collect_items,
+            rule_sum_mul_pairs,
             rule_open_brackets,
-            rule_collect_negs,
-            rule_split_sum
+            rule_collect_negs
+
+            % Dangerous optimization.
+            %rule_split_sum
         ],
     lists:foldl(fun(Rule, Cur_E) -> apply(jdlib_expr, Rule, [Cur_E, Opts]) end, E, Rules).
 
@@ -487,7 +492,7 @@ rule_normalization(E, _) when is_float(E) ->
 % If there is only one argument, we do not need operation:
 %   {sum, [x]} => x
 %   {mul, [x]} => x
-rule_normalization({Oper, L}, _) when ?IS_MULTINARY(Oper) ->
+rule_normalization({Oper, L} = E, _) when ?IS_MULTINARY(Oper) ->
     {Same_Oper_Exprs, Other_Opers_Exprs} =
         lists:partition
         (
@@ -517,48 +522,6 @@ rule_normalization({Oper, L}, _) when ?IS_MULTINARY(Oper) ->
             {Oper, Sorted_Args}
     end;
 rule_normalization(E, _) ->
-    E.
-
-%---------------------------------------------------------------------------------------------------
-
--spec rule_collect_items(E :: expr()) -> expr().
-%% @doc
-%% Collect items for sum and mul operation.
-rule_collect_items(E) ->
-    rule_collect_items(E, default_options()).
-
--spec rule_collect_items(E :: expr(), Opts :: options()) -> expr().
-%% @doc
-%% Collect items for sum and mul operation.
-rule_collect_items({sum, L}, _) ->
-    H = jdlib_lists:sorted_histogram(L),
-    New_L =
-        lists:map
-        (
-            fun
-                ({X, 1}) ->
-                    X;
-                ({X, C}) ->
-                    {mul, [C, X]}
-            end,
-            H
-        ),
-    {sum, New_L};
-rule_collect_items({mul, L}, _) ->
-    H = jdlib_lists:sorted_histogram(L),
-    New_L =
-        lists:map
-        (
-            fun
-                ({X, 1}) ->
-                    X;
-                ({X, C}) ->
-                    {pow, {X, C}}
-            end,
-            H
-        ),
-    {mul, New_L};
-rule_collect_items(E, _) ->
     E.
 
 %---------------------------------------------------------------------------------------------------
@@ -718,6 +681,107 @@ rule_calculation({pow, {X, Y}} = E, #{is_ignore_indef := Is_Ignore_Indef}) ->
             E
     end;
 rule_calculation(E, _) ->
+    E.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_collect_items(E :: expr()) -> expr().
+%% @doc
+%% Collect items for sum and mul operation.
+rule_collect_items(E) ->
+    rule_collect_items(E, default_options()).
+
+-spec rule_collect_items(E :: expr(), Opts :: options()) -> expr().
+%% @doc
+%% Collect items for sum and mul operation.
+rule_collect_items({sum, L}, _) ->
+    H = jdlib_lists:sorted_histogram(L),
+    New_L =
+        lists:map
+        (
+            fun
+                ({X, 1}) ->
+                    X;
+                ({X, C}) ->
+                    {mul, [C, X]}
+            end,
+            H
+        ),
+    {sum, New_L};
+rule_collect_items({mul, L}, _) ->
+    H = jdlib_lists:sorted_histogram(L),
+    New_L =
+        lists:map
+        (
+            fun
+                ({X, 1}) ->
+                    X;
+                ({X, C}) ->
+                    {pow, {X, C}}
+            end,
+            H
+        ),
+    {mul, New_L};
+rule_collect_items(E, _) ->
+    E.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_sum_mul_pairs(E :: expr()) -> expr().
+%% @doc
+%% Apply rules for sum and mul pairs.
+rule_sum_mul_pairs(E) ->
+    rule_sum_mul_pairs(E, default_options()).
+
+-spec rule_sum_mul_pairs(E :: expr(), Opts :: options()) -> expr().
+%% @doc
+%% Apply rules for sum and mul pairs.
+%% Very limited cases, which allow to apply the following rules:
+%%   n * x + m * x => (n + m) * x
+%%   (x^n) * (x^m) => x^(n + m)
+rule_sum_mul_pairs({sum, L} = E, _) ->
+    Sum_Pair_F =
+        fun
+            (X, {neg, X}) ->
+                {true, 0};
+            (X, {mul, [N, X]}) when is_number(N) ->
+                {true, {mul, [N + 1, X]}};
+            ({mul, [N, X]}, {neg, X}) when is_number(N) ->
+                {true, {mul, [N - 1, X]}};
+            ({mul, [N1, X]}, {mul, [N2, X]}) when (is_number(N1) andalso is_number(N2)) ->
+                {true, {mul, [N1 + N2, X]}};
+            (_, _) ->
+                false
+        end,
+    case jdlib_lists:apply_to_any_pair(L, Sum_Pair_F) of
+        {true, A1, A2, Res} ->
+            L1 = lists:delete(A1, L),
+            L2 = lists:delete(A2, L1),
+            {sum, [Res | L2]};
+        false ->
+            E
+    end;
+rule_sum_mul_pairs({mul, L} = E, _) ->
+    Mul_Pair_F =
+        fun
+            (X, {dvs, {1, X}}) ->
+                {true, 1};
+            (X, {pow, {X, N}}) when is_number(N) ->
+                {true, {pow, {X, N + 1}}};
+            ({pow, {X, N1}}, {pow, {X, N2}}) ->
+                {true, {pow, X, N1 + N2}};
+            (_, _) ->
+                false
+        end,
+    case jdlib_lists:apply_to_any_pair(L, Mul_Pair_F) of
+        {true, A1, A2, Res} ->
+            L1 = lists:delete(A1, L),
+            L2 = lists:delete(A2, L1),
+            {mul, [Res | L2]};
+        false ->
+            E
+    end;
+rule_sum_mul_pairs(E, _) ->
     E.
 
 %---------------------------------------------------------------------------------------------------
