@@ -16,6 +16,7 @@
          rule_calculation/1, rule_calculation/2,
          rule_open_brackets/1, rule_open_brackets/2,
          rule_collect_negs/1, rule_collect_negs/2,
+         rule_split_sum/1, rule_split_sum/2,
          neg/1, sum/2, sub/2, mul/2, dvs/2, pow/2,
          simplify/1, simplify/2]).
 
@@ -175,6 +176,16 @@ rule_open_brackets_test() ->
 rule_collect_negs_test() ->
     ?assertEqual({mul, [a, b, c]}, rule_collect_negs({mul, [{neg, a}, b, {neg, c}]})),
     ?assertEqual({neg, {mul, [a, b, c]}}, rule_collect_negs({mul, [{neg, a}, {neg, b}, {neg, c}]})),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_split_sum_test() -> ok.
+%% @doc
+%% Function rule_split_sum test.
+rule_split_sum_test() ->
+    ?assertEqual({sub, {{sum, [a, c]}, {sum, [b, d]}}},
+                 rule_split_sum({sum, [a, {neg, b}, c, {neg, d}]})),
     ok.
 
 %---------------------------------------------------------------------------------------------------
