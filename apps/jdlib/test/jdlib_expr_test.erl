@@ -11,11 +11,12 @@
 
 % Functions import.
 -import(jdlib_expr,
-        [is_eq/2, is_const/1, substitute/3,
+        [is_eq/2, is_const/1, is_polynomial/1, substitute/3,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
          rule_open_brackets/1, rule_open_brackets/2,
-         neg/1, sum/2, sub/2, mul/2, dvs/2,
+         rule_collect_negs/1, rule_collect_negs/2,
+         neg/1, sum/2, sub/2, mul/2, dvs/2, pow/2,
          simplify/1, simplify/2]).
 
 %---------------------------------------------------------------------------------------------------
@@ -41,6 +42,18 @@ is_const_test() ->
     ?assert(not is_const(x)),
     ?assert(is_const({sum, [{neg, 3}, {dvs, {1, 1}}]})),
     ?assert(not is_const({sub, {{sum, [1, 2, 3]}, {mul, [1, x, 2]}}})),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec is_polynomial_test() -> ok.
+%% @doc
+%% Function is_polynomial test.
+is_polynomial_test() ->
+    ?assert(is_polynomial(5)),
+    ?assert(is_polynomial(x)),
+    ?assert(is_polynomial({sum, [{mul, [x, y, 4]}, {sub, {a, b}}, {pow, {x, y}}]})),
+    ?assert(not is_polynomial({sum, [{mul, [x, y, 4]}, {sub, {a, {dvs, {t, w}}}}, {pow, {x, y}}]})),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -104,23 +117,37 @@ rule_calculation_test() ->
     ?assertEqual(0, rule_calculation({mul, [x, y, 0, z]})),
 
     % Dvs.
-    ?assertEqual({dvs, {2, 4}}, rule_calculation({dvs, {2, 4}},
-                                                 #{is_calc_frac => false, is_ignore_dbz => true})),
-    ?assert(is_eq(0.5, rule_calculation({dvs, {2, 4}},
-                                        #{is_calc_frac => true, is_ignore_dbz => true}))),
-    ?assert(is_eq(2, rule_calculation({dvs, {4, 2}},
-                                      #{is_calc_frac => false, is_ignore_dbz => true}))),
+    ?assertEqual({dvs, {2, 4}},
+                 rule_calculation({dvs, {2, 4}},
+                                  #{is_calc_frac => false, is_ignore_indef => true})),
+    ?assert(is_eq(rule_calculation({dvs, {2, 4}},
+                                   #{is_calc_frac => true, is_ignore_indef => true}), 0.5)),
+    ?assert(is_eq(rule_calculation({dvs, {4, 2}},
+                                   #{is_calc_frac => false, is_ignore_indef => true}), 2)),
     ?assertThrow({dbz, _}, rule_calculation({dvs, {1, 0}})),
     ?assertThrow({dbz, _}, rule_calculation({dvs, {0, 0}})),
     ?assertThrow({dbz, _}, rule_calculation({dvs, {x, 0}})),
     ?assertEqual(1, rule_calculation({dvs, {x, x}},
-                                     #{is_calc_frac => true, is_ignore_dbz => true})),
-    ?assertEqual({dvs, {x, x}}, rule_calculation({dvs, {x, x}},
-                                                 #{is_calc_frac => true, is_ignore_dbz => false})),
+                                     #{is_calc_frac => true, is_ignore_indef => true})),
+    ?assertEqual({dvs, {x, x}},
+                 rule_calculation({dvs, {x, x}},
+                                  #{is_calc_frac => true, is_ignore_indef => false})),
     ?assertEqual(0, rule_calculation({dvs, {0, x}},
-                                     #{is_calc_frac => true, is_ignore_dbz => true})),
-    ?assertEqual({dvs, {0, x}}, rule_calculation({dvs, {0, x}},
-                                                 #{is_calc_frac => true, is_ignore_dbz => false})),
+                                     #{is_calc_frac => true, is_ignore_indef => true})),
+    ?assertEqual({dvs, {0, x}},
+                 rule_calculation({dvs, {0, x}},
+                                  #{is_calc_frac => true, is_ignore_indef => false})),
+    ?assertEqual(x, rule_calculation({dvs, {x, 1}})),
+    ?assertEqual({neg, x}, rule_calculation({dvs, {x, -1}})),
+
+    % Pow.
+    ?assert(is_eq(rule_calculation({pow, {3, 3}}), 27)),
+    ?assertThrow({indef, _}, rule_calculation({pow, {0, 0}})),
+    ?assertEqual(x, rule_calculation({pow, {x, 1}})),
+    ?assertEqual(0, rule_calculation({pow, {0, x}}, #{is_ignore_indef => true})),
+    ?assertEqual({pow, {0, x}}, rule_calculation({pow, {0, x}}, #{is_ignore_indef => false})),
+    ?assertEqual(1, rule_calculation({pow, {x, 0}}, #{is_ignore_indef => true})),
+    ?assertEqual({pow, {x, 0}}, rule_calculation({pow, {x, 0}}, #{is_ignore_indef => false})),
 
     ok.
 
@@ -138,6 +165,16 @@ rule_open_brackets_test() ->
     ?assertEqual({sum, [x, y]}, rule_open_brackets({sub, {x, {neg, y}}})),
     ?assertEqual({sub, {{sum, [x, b]}, a}}, rule_open_brackets({sub, {x, {sub, {a, b}}}})),
     ?assertEqual({neg, {sum, [x, y]}}, rule_open_brackets({sub, {{neg, x}, y}})),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_collect_negs_test() -> ok.
+%% @doc
+%% Function rule_collect_negs test.
+rule_collect_negs_test() ->
+    ?assertEqual({mul, [a, b, c]}, rule_collect_negs({mul, [{neg, a}, b, {neg, c}]})),
+    ?assertEqual({neg, {mul, [a, b, c]}}, rule_collect_negs({mul, [{neg, a}, {neg, b}, {neg, c}]})),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -198,6 +235,21 @@ dvs_test() ->
     ?assertEqual(1, dvs(x, x)),
     ?assertEqual(0, dvs(0, x)),
     ?assertThrow({dbz, _}, dvs(x, 0)),
+    ?assertEqual(x, dvs(x, 1)),
+    ?assertEqual({neg, x}, dvs(x, -1)),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec pow_test() -> ok.
+%% @doc
+%% Function pow test.
+pow_test() ->
+    ?assertEqual(27, pow(3, 3)),
+    ?assertThrow({indef, _}, pow(0, 0)),
+    ?assertEqual(x, pow(x, 1)),
+    ?assertEqual(1, pow(x, 0)),
+    ?assertEqual(0, pow(0, x)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

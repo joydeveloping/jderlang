@@ -8,6 +8,7 @@
 %%   <li><tt>sub</tt> - subtraction of two values (<tt>x - y</li>)</li>
 %%   <li><tt>mul</tt> - multiplication of expressions list (<tt>x * y * ...</tt>)</li>
 %%   <li><tt>dvs</tt> - division operation(<tt>x / y</tt>)</li>
+%%   <li><tt>pow</tt> - возведение в степень(<tt>x^y</tt>)</li>
 %% </ul
 %%
 %% Copyright Joy Developing.
@@ -16,12 +17,15 @@
 -module(jdlib_expr).
 
 % Export.
--export([neg/1, sum/2, sum/1, sub/2, mul/2, mul/1, dvs/2,
-         is_eq/2, is_const/1, substitute/3, to_string/1,
+-export([neg/1, sum/2, sum/1, sub/2, mul/2, mul/1, dvs/2, pow/2,
+         is_eq/2, is_const/1, is_polynomial/1,
+         substitute/3,
+         to_string/1,
          simplify/1, simplify/2,
          rule_normalization/1, rule_normalization/2,
          rule_calculation/1, rule_calculation/2,
-         rule_open_brackets/1, rule_open_brackets/2]).
+         rule_open_brackets/1, rule_open_brackets/2,
+         rule_collect_negs/1, rule_collect_negs/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -38,19 +42,22 @@
 -define(IS_LE(X, Y), (not ?IS_GT(X, Y))).
 -define(IS_GE(X, Y), (not ?IS_LT(X, Y))).
 
-% Check if expression is trivial.
+% Check if expression is trivial (can not be optimized).
 -define(IS_TRIVIAL(X), (is_integer(X) orelse is_atom(X))).
+
+% Check if expression is atom (can not be decomposed).
+-define(IS_ATOM(X), (is_number(X) orelse is_atom(X))).
 
 % Check if term is expression.
 % It is macros for use in guard expressions.
 % It is just light check, even if ?IS_EXPR(X) =:= true X may be not valid expression.
--define(IS_EXPR(X), (?IS_TRIVIAL(X) orelse is_float(X) orelse is_tuple(X))).
+-define(IS_EXPR(X), (?IS_ATOM(X) orelse is_tuple(X))).
 
 % Check if oper unary.
 -define(IS_UNARY(OPER), (OPER =:= neg)).
 
 % Check if oper binary.
--define(IS_BINARY(OPER), ((OPER =:= sub) orelse (OPER =:= dvs))).
+-define(IS_BINARY(OPER), ((OPER =:= sub) orelse (OPER =:= dvs) orelse (OPER =:= pow))).
 
 % Check if oper has list of arguments.
 -define(IS_MULTINARY(OPER), ((OPER =:= sum) orelse (OPER =:= mul))).
@@ -68,7 +75,7 @@
 -type unary_operation() :: neg.
 
 % Binary operation.
--type binary_operation() :: sub | dvs.
+-type binary_operation() :: sub | dvs | pow.
 
 % Operation with many arguments.
 -type multinary_operation() :: sum | mul.
@@ -151,6 +158,14 @@ dvs(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
     simplify({dvs, {X, Y}}).
 
 %---------------------------------------------------------------------------------------------------
+
+-spec pow(X :: expr(), Y :: expr()) -> expr().
+%% @doc
+%% Power.
+pow(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
+    simplify({pow, {X, Y}}).
+
+%---------------------------------------------------------------------------------------------------
 % Expression functions.
 %---------------------------------------------------------------------------------------------------
 
@@ -188,6 +203,22 @@ is_const({Oper, L}) when ?IS_MULTINARY(Oper) ->
     lists:all(fun is_const/1, L);
 is_const(E) ->
     is_number(E).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec is_polynomial(E :: expr()) -> boolean().
+%% @doc
+%% Check if expression is polynomial (contains only neg, sum, sub, mul, pow operations).
+is_polynomial(E) when ?IS_ATOM(E) ->
+    true;
+is_polynomial({Oper, X}) when (Oper =:= neg) ->
+    is_polynomial(X);
+is_polynomial({Oper, {X, Y}}) when (Oper =:= sub) orelse (Oper =:= pow) ->
+    is_polynomial(X) andalso is_polynomial(Y);
+is_polynomial({Oper, L}) when (Oper =:= sum) orelse (Oper =:= mul) ->
+    lists:all(fun is_polynomial/1, L);
+is_polynomial(_) ->
+    false.
 
 %---------------------------------------------------------------------------------------------------
 
@@ -234,6 +265,8 @@ to_string({mul, [H | T]}) ->
     ++ ")";
 to_string({dvs, {X, Y}}) ->
     "(" ++ to_string(X) ++ " / " ++ to_string(Y) ++ ")";
+to_string({pow, {X, Y}}) ->
+    to_string(X) ++ "^" ++ to_string(Y);
 to_string(X) ->
     lists:flatten(io_lib:format("~w", [X])).
 
@@ -250,9 +283,9 @@ default_options() ->
         % It can lead to loss of precision, for example in expression 1 / 3.
         is_calc_frac => true,
 
-        % Ignore division by zero exception.
+        % Ignore division by zero and other indefinities.
         % It allows us to apply such optimizations as x / x = 1.
-        is_ignore_dbz => true
+        is_ignore_indef => true
     }.
 
 %---------------------------------------------------------------------------------------------------
@@ -310,7 +343,8 @@ rules(E, Opts) ->
         [
             rule_normalization,
             rule_calculation,
-            rule_open_brackets
+            rule_open_brackets,
+            rule_collect_negs
         ],
     lists:foldl(fun(Rule, Cur_E) -> apply(jdlib_expr, Rule, [Cur_E, Opts]) end, E, Rules).
 
@@ -326,13 +360,11 @@ rule_normalization(E) ->
 %% @doc
 %% Normalization rule.
 %% For float values drops zero fraction:
-%%   N.0 -> N
+%%   N.0 => N
 rule_normalization(E, _) when is_float(E) ->
     N = trunc(E),
     if
-
-        % Not "=:="!
-        E == N ->
+        ?IS_EQ(E, N) ->
             N;
 
         true ->
@@ -340,12 +372,12 @@ rule_normalization(E, _) when is_float(E) ->
     end;
 
 % Multinary operations are to flatten:
-%   {sum, [a, b, c, {sum, [x, y, z]}]} -> {sum, [a, b, c, x, y, z]}
-%   {mul, [a, b, c, {sum, [x, y, z]}]} -> {mul, [a, b, c, x, y, z]}
+%   {sum, [a, b, c, {sum, [x, y, z]}]} => {sum, [a, b, c, x, y, z]}
+%   {mul, [a, b, c, {sum, [x, y, z]}]} => {mul, [a, b, c, x, y, z]}
 % and arguments are sorted.
 % If there is only one argument, we do not need operation:
-%   {sum, [x]} -> x
-%   {mul, [x]} -> x
+%   {sum, [x]} => x
+%   {mul, [x]} => x
 rule_normalization({Oper, L}, _) when ?IS_MULTINARY(Oper) ->
     {Same_Oper_Exprs, Other_Opers_Exprs} =
         lists:partition
@@ -400,26 +432,36 @@ rule_calculation({sum, Args}, _) ->
             Value;
 
         % No numeric part.
-        Value == 0 ->
+        ?IS_EQ(Value, 0) ->
             {sum, Exprs};
 
         % Numeric and symbol part.
-        Value /= 0 ->
+        true ->
             {sum, [Value | Exprs]}
     end;
+
+% Sub calculation rules:
+%   x - x => 0
+%   0 - y = -y
+%   x - 0 = x
 rule_calculation({sub, {X, Y}} = E, _) ->
+    Is_Eq = is_eq(X, Y),
     if
-        X =:= Y ->
+        Is_Eq ->
             0;
         is_number(X) andalso is_number(Y) ->
             X - Y;
-        X == 0 ->
+        ?IS_EQ(X, 0) ->
             {neg, Y};
-        Y == 0 ->
+        ?IS_EQ(Y, 0) ->
             X;
         true ->
             E
     end;
+
+% Mul calculation rules:
+%   x * 0 = 0 * x => 0
+%   x * 1 = 1 * x => x
 rule_calculation({mul, Args}, _) ->
     {Numbers, Exprs} = lists:partition(fun(X) -> is_number(X) end, Args),
     Value = lists:foldl(fun(X, Cur) -> X * Cur end, 1, Numbers),
@@ -429,23 +471,34 @@ rule_calculation({mul, Args}, _) ->
             Value;
 
         % Multiplication by zero.
-        Value == 0 ->
+        ?IS_EQ(Value, 0) ->
             0;
 
         % No numeric part.
-        Value == 1 ->
+        ?IS_EQ(Value, 1) ->
             {mul, Exprs};
 
         % Numeric and symbol parts.
         true ->
             {mul, [Value | Exprs]}
     end;
+
+% Dvs calculation rules:
+%   0 / 0 => exception
+%   x / x => 1 (is_ignore_indef)
+%   x / 1 => x
+%   x / (-1) => -x
 rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
-                                      is_ignore_dbz := Is_Ignore_DBZ}) ->
+                                      is_ignore_indef := Is_Ignore_Indef}) ->
     if
         % We can not process this exception.
-        Y == 0 ->
+        ?IS_EQ(Y, 0) ->
             throw({dbz, E});
+
+        ?IS_EQ(Y, 1) ->
+            X;
+        ?IS_EQ(Y, -1) ->
+            {neg, X};
 
         % Numbers and Y /= 0.
         % We have a chance to calculate it.
@@ -466,7 +519,7 @@ rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
                     E
             end;
 
-        (X == 0) andalso Is_Ignore_DBZ ->
+        ?IS_EQ(X, 0) andalso Is_Ignore_Indef ->
             0;
 
         % Can not calculate.
@@ -474,11 +527,42 @@ rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
             Is_Eq = is_eq(X, Y),
 
             if
-                Is_Eq andalso Is_Ignore_DBZ ->
+                Is_Eq andalso Is_Ignore_Indef ->
                     1;
                 true ->
                     E
             end
+    end;
+
+% Pow calculation rules:
+%   0^0 => exception
+%   0^x => 0 (is_ignore_indef)
+%   x^0 => 1 (is_ignore_indef)
+%   x^1 => x
+rule_calculation({pow, {X, Y}} = E, #{is_ignore_indef := Is_Ignore_Indef}) ->
+    if
+        ?IS_EQ(X, 0) ->
+            if
+                ?IS_EQ(Y, 0) ->
+                    throw({indef, E});
+                Is_Ignore_Indef ->
+                    0;
+                true ->
+                    E
+            end;
+        ?IS_EQ(Y, 0) ->
+            if
+                Is_Ignore_Indef ->
+                    1;
+                true ->
+                    E
+            end;
+        ?IS_EQ(Y, 1) ->
+            X;
+        is_number(X) andalso is_number(Y) ->
+            math:pow(X, Y);
+        true ->
+            E
     end;
 rule_calculation(E, _) ->
     E.
@@ -488,22 +572,21 @@ rule_calculation(E, _) ->
 -spec rule_open_brackets(E :: expr()) -> expr().
 %% @doc
 %% Open brackets in expression.
-%% -(-x) -> x
-%% -(x - y) -> y - x
-%% x + (a - b) -> x + a + (-b)
-%% x - (-y) -> x + y
-%% x - (a - b) -> (x + b) - a
-%% (-x) - y -> -(x + y)
 rule_open_brackets(E) ->
     rule_open_brackets(E, default_options()).
 
 -spec rule_open_brackets(E :: expr(), Opts :: options()) -> expr().
 %% @doc
 %% Open brackets in expression.
+%%   -(-x) => x
+%%   -(x - y) => y - x
 rule_open_brackets({neg, {neg, E}}, _) ->
     E;
 rule_open_brackets({neg, {sub, {X, Y}}}, _) ->
     {sub, {Y, X}};
+
+% Sum open brackets rules:
+%   x + (a - b) => x + a + (-b)
 rule_open_brackets({sum, L}, _) ->
     {Sub_Exprs, Exprs} =
         lists:partition
@@ -527,6 +610,11 @@ rule_open_brackets({sum, L}, _) ->
             [], Sub_Exprs
         ),
     {sum, lists:append(Exprs, New_Args)};
+
+% Sub open brackets rules:
+%   x - (-y) => x + y
+%   x - (a - b) => (x + b) - a
+%   (-x) - y -> =(x + y)
 rule_open_brackets({sub, {X, {neg, Y}}}, _) ->
     {sum, [X, Y]};
 rule_open_brackets({sub, {X, {sub, {A, B}}}}, _) ->
@@ -534,6 +622,41 @@ rule_open_brackets({sub, {X, {sub, {A, B}}}}, _) ->
 rule_open_brackets({sub, {{neg, X}, Y}}, _) ->
     {neg, {sum, [X, Y]}};
 rule_open_brackets(E, _) ->
+    E.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule_collect_negs(E :: expr()) -> expr().
+%% @doc
+%% Collect negs.
+%%   (-a) * b * (-c) => a * b * c
+%%   (-a) * (-b) * (-c) = -(a * b * c)
+rule_collect_negs(E) ->
+    rule_collect_negs(E, default_options()).
+
+-spec rule_collect_negs(E :: expr(), Opts :: options()) -> expr().
+%% @doc
+%% Collect negs.
+rule_collect_negs({mul, Exprs}, _) ->
+    {New_Exprs, Is_Neg} =
+        lists:mapfoldl
+        (
+            fun
+                ({neg, X}, Acc) ->
+                    {X, Acc xor true};
+                (X, Acc) ->
+                    {X, Acc}
+            end,
+            false, Exprs
+        ),
+    Mul = {mul, New_Exprs},
+    if
+        Is_Neg ->
+            {neg, Mul};
+        true ->
+            Mul
+    end;
+rule_collect_negs(E, Opts) ->
     E.
 
 %---------------------------------------------------------------------------------------------------
