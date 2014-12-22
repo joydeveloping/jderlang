@@ -55,7 +55,7 @@
 % Check if term is expression.
 % It is macros for use in guard expressions.
 % It is just light check, even if ?IS_EXPR(X) =:= true X may be not valid expression.
--define(IS_EXPR(X), (?IS_ATOM(X) orelse is_tuple(X))).
+-define(IS_EXPR(X), (?IS_ATOM(X) orelse is_list(X))).
 
 % Check if oper unary.
 -define(IS_UNARY(OPER), (OPER =:= neg)).
@@ -88,10 +88,7 @@
 -type operation() :: unary_operation() | binary_operation() | multinary_operation().
 
 % Expression.
--type expr() :: number() | atom()
-                | {unary_operation(), expr()}
-                | {binary_operation(), {expr(), expr()}}
-                | {multinary_operation(), [expr()]}.
+-type expr() :: number() | atom() | list().
 
 % Expressions list.
 -type exprs_list() :: [expr()].
@@ -107,7 +104,7 @@
 %% @doc
 %% Negate constructor.
 neg(X) when ?IS_EXPR(X) ->
-    simplify({neg, X}).
+    simplify([neg, X]).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -115,7 +112,7 @@ neg(X) when ?IS_EXPR(X) ->
 %% @doc
 %% Sum constructor.
 sum(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
-    simplify({sum, [X, Y]}).
+    simplify([sum, X, Y]).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -125,7 +122,7 @@ sum(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 sum([]) ->
     throw({badarg, []});
 sum(L) when is_list(L) ->
-    simplify({sum, L}).
+    simplify([sum | L]).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -133,7 +130,7 @@ sum(L) when is_list(L) ->
 %% @doc
 %% Sub constructor.
 sub(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
-    simplify({sub, {X, Y}}).
+    simplify([sub, X, Y]).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -141,7 +138,7 @@ sub(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 %% @doc
 %% Mul constructor.
 mul(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
-    simplify({mul, [X, Y]}).
+    simplify([mul, X, Y]).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -151,7 +148,7 @@ mul(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 mul([]) ->
     throw({badarg, []});
 mul(L) when is_list(L) ->
-    simplify({mul, L}).
+    simplify([mul | L]).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -159,7 +156,7 @@ mul(L) when is_list(L) ->
 %% @doc
 %% Division constructor.
 dvs(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
-    simplify({dvs, {X, Y}}).
+    simplify([dvs, X, Y]).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -167,7 +164,7 @@ dvs(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 %% @doc
 %% Power.
 pow(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
-    simplify({pow, {X, Y}}).
+    simplify([pow, X, Y]).
 
 %---------------------------------------------------------------------------------------------------
 % Check for particular operation.
@@ -176,7 +173,7 @@ pow(X, Y) when (?IS_EXPR(X) andalso ?IS_EXPR(Y)) ->
 -spec is_neg(E :: expr()) -> boolean().
 %% @doc
 %% Check if it is neg operation.
-is_neg({neg, _}) ->
+is_neg([neg, _]) ->
     true;
 is_neg(_) ->
     false.
@@ -186,7 +183,7 @@ is_neg(_) ->
 -spec is_sum(E :: expr()) -> boolean().
 %% @doc
 %% Check if it is sum operation.
-is_sum({sum, _}) ->
+is_sum([sum | _]) ->
     true;
 is_sum(_) ->
     false.
@@ -196,7 +193,7 @@ is_sum(_) ->
 -spec is_sub(E :: expr()) -> boolean().
 %% @doc
 %% Check if it is sub operation.
-is_sub({sub, _}) ->
+is_sub([sub, _, _]) ->
     true;
 is_sub(_) ->
     false.
@@ -206,7 +203,7 @@ is_sub(_) ->
 -spec is_mul(E :: expr()) -> boolean().
 %% @doc
 %% Check if it is mul operation.
-is_mul({mul, _}) ->
+is_mul([mul | _]) ->
     true;
 is_mul(_) ->
     false.
@@ -216,7 +213,7 @@ is_mul(_) ->
 -spec is_dvs(E :: expr()) -> boolean().
 %% @doc
 %% Check if it is dvs operation.
-is_dvs({dvs, _}) ->
+is_dvs([dvs, _, _]) ->
     true;
 is_dvs(_) ->
     false.
@@ -226,7 +223,7 @@ is_dvs(_) ->
 -spec is_pow(E :: expr()) -> boolean().
 %% @doc
 %% Check if it is pow operation.
-is_pow({pow, _}) ->
+is_pow([pow, _, _]) ->
     true;
 is_pow(_) ->
     false.
@@ -240,19 +237,14 @@ is_pow(_) ->
 %% Check equality.
 %% Warning!
 %% E1 is equal to E2 without simplification effect.
-%% So {sum, [a, b]} is not equal to {sum, [b, a]},
-%% but {neg, 1} is equal to {neg, 1.0}.
+%% So [sum, a, b] is not equal to [sum, b, a],
+%% but [neg, 1] is equal to [neg, 1.0].
 is_eq(E, E) when is_atom(E) ->
     true;
 is_eq(E1, E2) when (is_number(E1) andalso is_number(E2)) ->
     ?IS_EQ(E1, E2);
-is_eq({Oper, X1}, {Oper, X2}) when ?IS_UNARY(Oper) ->
-    is_eq(X1, X2);
-is_eq({Oper, {X1, Y1}}, {Oper, {X2, Y2}}) when ?IS_BINARY(Oper) ->
-    is_eq(X1, X2) andalso is_eq(Y1, Y2);
-is_eq({Oper, L1}, {Oper, L2}) when (?IS_MULTINARY(Oper)
-                                    andalso (length(L1) =:= length(L2))) ->
-    lists:all(fun({X1, X2}) -> is_eq(X1, X2) end, lists:zip(L1, L2));
+is_eq([Oper | T1], [Oper | T2]) when (length(T1) =:= length(T2)) ->
+    lists:all(fun({E1, E2}) -> is_eq(E1, E2) end, lists:zip(T1, T2));
 is_eq(_, _) ->
     false.
 
@@ -261,12 +253,8 @@ is_eq(_, _) ->
 -spec is_const(E :: expr()) -> boolean().
 %% @doc
 %% Check if expression is constant.
-is_const({Oper, X}) when ?IS_UNARY(Oper) ->
-    is_const(X);
-is_const({Oper, {X, Y}}) when ?IS_BINARY(Oper) ->
-    is_const(X) andalso is_const(Y);
-is_const({Oper, L}) when ?IS_MULTINARY(Oper) ->
-    lists:all(fun is_const/1, L);
+is_const([_ | T]) ->
+    lists:all(fun is_const/1, T);
 is_const(E) ->
     is_number(E).
 
@@ -275,28 +263,18 @@ is_const(E) ->
 -spec is_polynomial(E :: expr()) -> boolean().
 %% @doc
 %% Check if expression is polynomial (contains only neg, sum, sub, mul, pow operations).
-is_polynomial(E) when ?IS_ATOM(E) ->
-    true;
-is_polynomial({Oper, X}) when (Oper =:= neg) ->
-    is_polynomial(X);
-is_polynomial({Oper, {X, Y}}) when (Oper =:= sub) orelse (Oper =:= pow) ->
-    is_polynomial(X) andalso is_polynomial(Y);
-is_polynomial({Oper, L}) when (Oper =:= sum) orelse (Oper =:= mul) ->
-    lists:all(fun is_polynomial/1, L);
-is_polynomial(_) ->
-    false.
+is_polynomial([Oper | T]) when (Oper /= dvs) ->
+    lists:all(fun is_polynomial/1, T);
+is_polynomial(E) ->
+    ?IS_ATOM(E).
 
 %---------------------------------------------------------------------------------------------------
 
 -spec substitute(E :: expr(), A :: atom(), S :: expr()) -> expr().
 %% @doc
 %% Substiture atom A with expression S.
-substitute({Oper, X}, A, S) when ?IS_UNARY(Oper) ->
-    {Oper, substitute(X, A, S)};
-substitute({Oper, {X, Y}}, A, S) when ?IS_BINARY(Oper) ->
-    {Oper, {substitute(X, A, S), substitute(Y, A, S)}};
-substitute({Oper, L}, A, S) when ?IS_MULTINARY(Oper) ->
-    {Oper, lists:map(fun(E) -> substitute(E, A, S) end, L)};
+substitute([Oper | T], A, S) ->
+    [Oper | lists:map(fun(E) -> substitute(E, A, S) end, T)];
 substitute(A, A, S) ->
     S;
 substitute(E, _, _) ->
@@ -307,15 +285,15 @@ substitute(E, _, _) ->
 -spec expand_mul(E :: expr()) -> expr().
 %% @doc
 %% Expand mul operations.
-expand_mul({mul, [Arg]}) ->
+expand_mul([mul, Arg]) ->
     Arg;
-expand_mul({mul, [H | T]}) ->
+expand_mul([mul, H | T]) ->
     Items_F =
         fun
-            ({sum, Items}) ->
+            ([sum | Items]) ->
                 Items;
-            ({sub, {X, Y}}) ->
-                [X, {neg, Y}];
+            ([sub, X, Y]) ->
+                [X, [neg, Y]];
             (Any) ->
                 [Any]
         end,
@@ -325,17 +303,17 @@ expand_mul({mul, [H | T]}) ->
         (
             fun(E, Acc_Items) ->
                 E_Items = Items_F(E),
-                [{mul, [Acc_Item, E_Item]} || Acc_Item <- Acc_Items, E_Item <- E_Items]
+                [[mul, Acc_Item, E_Item] || Acc_Item <- Acc_Items, E_Item <- E_Items]
             end,
             H_Items,
             T
         ),
-    simplify({sum, New_Items});
-expand_mul({pow, {X, P}} = E) when is_integer(P) ->
+    simplify([sum | New_Items]);
+expand_mul([pow, X, P] = E) when is_integer(P) ->
     Is_Expand = is_sum(X) orelse is_sub(X),
     if
         Is_Expand ->
-            {mul, lists:duplicate(P, X)};
+            [mul | lists:duplicate(P, X)];
         true ->
             E
     end;
@@ -347,12 +325,12 @@ expand_mul(E) ->
 -spec to_string(E :: expr()) -> string().
 %% @doc
 %% Convert expression to string.
-to_string({neg, X}) ->
+to_string([neg, X]) ->
     "(-" ++ to_string(X) ++ ")";
-to_string({sum, [H | T]}) ->
+to_string([sum, H | T]) ->
     Next_Component_F =
         fun
-            ({neg, [E]}) ->
+            ([neg, E]) ->
                 " - " ++ to_string(E);
             (E) ->
                 " + " ++ to_string(E)
@@ -361,17 +339,17 @@ to_string({sum, [H | T]}) ->
     ++ to_string(H)
     ++ lists:append(lists:map(Next_Component_F, T))
     ++ ")";
-to_string({sub, {X, Y}}) ->
+to_string([sub, X, Y]) ->
     "(" ++ to_string(X) ++ " - " ++ to_string(Y) ++ ")";
-to_string({mul, [H | T]}) ->
+to_string([mul, H | T]) ->
     Next_Factor_F = fun(E) -> " * " ++ to_string(E) end,
     "("
     ++ to_string(H)
     ++ lists:append(lists:map(Next_Factor_F, T))
     ++ ")";
-to_string({dvs, {X, Y}}) ->
+to_string([dvs, X, Y]) ->
     "(" ++ to_string(X) ++ " / " ++ to_string(Y) ++ ")";
-to_string({pow, {X, Y}}) ->
+to_string([pow, X, Y]) ->
     to_string(X) ++ "^" ++ to_string(Y);
 to_string(X) ->
     lists:flatten(io_lib:format("~w", [X])).
@@ -412,23 +390,13 @@ simplify(E, _) when ?IS_TRIVIAL(E) ->
     E;
 simplify(E, Opts) when is_float(E) ->
     rules(E, Opts);
-simplify({Oper, Args} = E, Opts) ->
+simplify([Oper | Args] = E, Opts) ->
 
     % First try to apply simplification to nested expressions.
-    Simp_Args =
-        if
-            ?IS_UNARY(Oper) ->
-                X = Args,
-                simplify(X, Opts);
-            ?IS_BINARY(Oper) ->
-                {X1, X2} = Args,
-                {simplify(X1, Opts), simplify(X2, Opts)};
-            ?IS_MULTINARY(Oper) ->
-                lists:map(fun(X) -> simplify(X, Opts) end, Args)
-        end,
+    Simp_Args = lists:map(fun(X) -> simplify(X, Opts) end, Args),
 
     % Then try to simplify whole expression while it is possible.
-    New = rules({Oper, Simp_Args}, Opts),
+    New = rules([Oper | Simp_Args], Opts),
     case New of
 
         % Expression is unchanged - stop simplification.
@@ -486,19 +454,19 @@ rule_normalization(E, _) when is_float(E) ->
     end;
 
 % Multinary operations are to flatten:
-%   {sum, [a, b, c, {sum, [x, y, z]}]} => {sum, [a, b, c, x, y, z]}
-%   {mul, [a, b, c, {sum, [x, y, z]}]} => {mul, [a, b, c, x, y, z]}
+%   [sum, a, b, c, [sum, x, y, z]] => [sum, a, b, c, x, y, z]
+%   [mul, a, b, c, [mul, x, y, z]] => [mul, a, b, c, x, y, z]
 % and arguments are sorted.
 % If there is only one argument, we do not need operation:
-%   {sum, [x]} => x
-%   {mul, [x]} => x
-rule_normalization({Oper, L} = E, _) when ?IS_MULTINARY(Oper) ->
+%   [sum, x] => x
+%   [mul, x] => x
+rule_normalization([Oper | L], _) when ?IS_MULTINARY(Oper) ->
     {Same_Oper_Exprs, Other_Opers_Exprs} =
         lists:partition
         (
             fun(X) ->
                 case X of
-                    {Oper, _} ->
+                    [Oper | _] ->
                         true;
                     _ ->
                         false
@@ -509,7 +477,7 @@ rule_normalization({Oper, L} = E, _) when ?IS_MULTINARY(Oper) ->
     New_Args =
         lists:foldl
         (
-            fun({_, Args}, Cur_Args) ->
+            fun([_ | Args], Cur_Args) ->
                 lists:append(Cur_Args, Args)
             end,
             [], Same_Oper_Exprs
@@ -519,7 +487,7 @@ rule_normalization({Oper, L} = E, _) when ?IS_MULTINARY(Oper) ->
         [Single_Arg] ->
             Single_Arg;
         _ ->
-            {Oper, Sorted_Args}
+            [Oper | Sorted_Args]
     end;
 rule_normalization(E, _) ->
     E.
@@ -535,9 +503,9 @@ rule_calculation(E) ->
 -spec rule_calculation(E :: expr(), Opts :: options()) -> expr().
 %% @doc
 %% Calculate numeric expressions.
-rule_calculation({neg, X}, _) when is_number(X) ->
+rule_calculation([neg, X], _) when is_number(X) ->
     -X;
-rule_calculation({sum, Args}, _) ->
+rule_calculation([sum | Args], _) ->
     {Numbers, Exprs} = lists:partition(fun(X) -> is_number(X) end, Args),
     Value = lists:sum(Numbers),
     if
@@ -547,18 +515,18 @@ rule_calculation({sum, Args}, _) ->
 
         % No numeric part.
         ?IS_EQ(Value, 0) ->
-            {sum, Exprs};
+            [sum | Exprs];
 
         % Numeric and symbol part.
         true ->
-            {sum, [Value | Exprs]}
+            [sum, Value | Exprs]
     end;
 
 % Sub calculation rules:
 %   x - x => 0
 %   0 - y = -y
 %   x - 0 = x
-rule_calculation({sub, {X, Y}} = E, _) ->
+rule_calculation([sub, X, Y] = E, _) ->
     Is_Eq = is_eq(X, Y),
     if
         Is_Eq ->
@@ -566,7 +534,7 @@ rule_calculation({sub, {X, Y}} = E, _) ->
         is_number(X) andalso is_number(Y) ->
             X - Y;
         ?IS_EQ(X, 0) ->
-            {neg, Y};
+            [neg, Y];
         ?IS_EQ(Y, 0) ->
             X;
         true ->
@@ -576,7 +544,7 @@ rule_calculation({sub, {X, Y}} = E, _) ->
 % Mul calculation rules:
 %   x * 0 = 0 * x => 0
 %   x * 1 = 1 * x => x
-rule_calculation({mul, Args}, _) ->
+rule_calculation([mul | Args], _) ->
     {Numbers, Exprs} = lists:partition(fun(X) -> is_number(X) end, Args),
     Value = lists:foldl(fun(X, Cur) -> X * Cur end, 1, Numbers),
     if
@@ -590,11 +558,11 @@ rule_calculation({mul, Args}, _) ->
 
         % No numeric part.
         ?IS_EQ(Value, 1) ->
-            {mul, Exprs};
+            [mul | Exprs];
 
         % Numeric and symbol parts.
         true ->
-            {mul, [Value | Exprs]}
+            [mul, Value | Exprs]
     end;
 
 % Dvs calculation rules:
@@ -602,8 +570,8 @@ rule_calculation({mul, Args}, _) ->
 %   x / x => 1 (is_ignore_indef)
 %   x / 1 => x
 %   x / (-1) => -x
-rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
-                                      is_ignore_indef := Is_Ignore_Indef}) ->
+rule_calculation([dvs, X, Y] = E, #{is_calc_frac := Is_Calc_Frac,
+                                    is_ignore_indef := Is_Ignore_Indef}) ->
     if
         % We can not process this exception.
         ?IS_EQ(Y, 0) ->
@@ -612,7 +580,7 @@ rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
         ?IS_EQ(Y, 1) ->
             X;
         ?IS_EQ(Y, -1) ->
-            {neg, X};
+            [neg, X];
 
         % Numbers and Y /= 0.
         % We have a chance to calculate it.
@@ -653,9 +621,9 @@ rule_calculation({dvs, {X, Y}} = E, #{is_calc_frac := Is_Calc_Frac,
 %   0^x => 0 (is_ignore_indef)
 %   x^0 => 1 (is_ignore_indef)
 %   x^1 => x
-rule_calculation({pow, {{pow, {X, N}}, M}}, _) when (is_number(N) andalso is_number(M)) ->
-    {pow, {X, N * M}};
-rule_calculation({pow, {X, Y}} = E, #{is_ignore_indef := Is_Ignore_Indef}) ->
+rule_calculation([pow, [pow, X, N], M], _) when (is_number(N) andalso is_number(M)) ->
+    [pow, X, N * M];
+rule_calculation([pow, X, Y] = E, #{is_ignore_indef := Is_Ignore_Indef}) ->
     if
         ?IS_EQ(X, 0) ->
             if
@@ -694,7 +662,7 @@ rule_collect_items(E) ->
 -spec rule_collect_items(E :: expr(), Opts :: options()) -> expr().
 %% @doc
 %% Collect items for sum and mul operation.
-rule_collect_items({sum, L}, _) ->
+rule_collect_items([sum | L], _) ->
     H = jdlib_lists:sorted_histogram(L),
     New_L =
         lists:map
@@ -703,12 +671,12 @@ rule_collect_items({sum, L}, _) ->
                 ({X, 1}) ->
                     X;
                 ({X, C}) ->
-                    {mul, [C, X]}
+                    [mul, C, X]
             end,
             H
         ),
-    {sum, New_L};
-rule_collect_items({mul, L}, _) ->
+    [sum | New_L];
+rule_collect_items([mul | L], _) ->
     H = jdlib_lists:sorted_histogram(L),
     New_L =
         lists:map
@@ -717,11 +685,11 @@ rule_collect_items({mul, L}, _) ->
                 ({X, 1}) ->
                     X;
                 ({X, C}) ->
-                    {pow, {X, C}}
+                    [pow, X, C]
             end,
             H
         ),
-    {mul, New_L};
+    [mul | New_L];
 rule_collect_items(E, _) ->
     E.
 
@@ -739,17 +707,17 @@ rule_sum_mul_pairs(E) ->
 %% Very limited cases, which allow to apply the following rules:
 %%   n * x + m * x => (n + m) * x
 %%   (x^n) * (x^m) => x^(n + m)
-rule_sum_mul_pairs({sum, L} = E, _) ->
+rule_sum_mul_pairs([sum | L] = E, _) ->
     Sum_Pair_F =
         fun
-            (X, {neg, X}) ->
+            (X, [neg, X]) ->
                 {true, 0};
-            (X, {mul, [N, X]}) when is_number(N) ->
-                {true, {mul, [N + 1, X]}};
-            ({mul, [N, X]}, {neg, X}) when is_number(N) ->
-                {true, {mul, [N - 1, X]}};
-            ({mul, [N1, X]}, {mul, [N2, X]}) when (is_number(N1) andalso is_number(N2)) ->
-                {true, {mul, [N1 + N2, X]}};
+            (X, [mul, N, X]) when is_number(N) ->
+                {true, [mul, N + 1, X]};
+            ([mul, N, X], [neg, X]) when is_number(N) ->
+                {true, [mul, N - 1, X]};
+            ([mul, N1, X], [mul, N2, X]) when (is_number(N1) andalso is_number(N2)) ->
+                {true, [mul, N1 + N2, X]};
             (_, _) ->
                 false
         end,
@@ -757,19 +725,19 @@ rule_sum_mul_pairs({sum, L} = E, _) ->
         {true, A1, A2, Res} ->
             L1 = lists:delete(A1, L),
             L2 = lists:delete(A2, L1),
-            {sum, [Res | L2]};
+            [sum, Res | L2];
         false ->
             E
     end;
-rule_sum_mul_pairs({mul, L} = E, _) ->
+rule_sum_mul_pairs([mul | L] = E, _) ->
     Mul_Pair_F =
         fun
-            (X, {dvs, {1, X}}) ->
+            (X, [dvs, 1, X]) ->
                 {true, 1};
-            (X, {pow, {X, N}}) when is_number(N) ->
-                {true, {pow, {X, N + 1}}};
-            ({pow, {X, N1}}, {pow, {X, N2}}) ->
-                {true, {pow, X, N1 + N2}};
+            (X, [pow, X, N]) when is_number(N) ->
+                {true, [pow, X, N + 1]};
+            ([pow, X, N1], [pow, X, N2]) ->
+                {true, [pow, X, N1 + N2]};
             (_, _) ->
                 false
         end,
@@ -777,7 +745,7 @@ rule_sum_mul_pairs({mul, L} = E, _) ->
         {true, A1, A2, Res} ->
             L1 = lists:delete(A1, L),
             L2 = lists:delete(A2, L1),
-            {mul, [Res | L2]};
+            [mul, Res | L2];
         false ->
             E
     end;
@@ -797,35 +765,35 @@ rule_open_brackets(E) ->
 %% Open brackets in expression.
 %%   -(-x) => x
 %%   -(x - y) => y - x
-rule_open_brackets({neg, {neg, E}}, _) ->
+rule_open_brackets([neg, [neg, E]], _) ->
     E;
-rule_open_brackets({neg, {sub, {X, Y}}}, _) ->
-    {sub, {Y, X}};
+rule_open_brackets([neg, [sub, X, Y]], _) ->
+    [sub, Y, X];
 
 % Sum open brackets rules:
 %   x + (a - b) => x + a + (-b)
-rule_open_brackets({sum, L}, _) ->
+rule_open_brackets([sum | L], _) ->
     {Sub_Exprs, Exprs} = lists:partition(fun is_sub/1, L),
     New_Args =
         lists:foldl
         (
-            fun({sub, {X, Y}}, Cur_Args) ->
-                lists:append(Cur_Args, [X, {neg, Y}])
+            fun([sub, X, Y], Cur_Args) ->
+                lists:append(Cur_Args, [X, [neg, Y]])
             end,
             [], Sub_Exprs
         ),
-    {sum, lists:append(Exprs, New_Args)};
+    [sum | lists:append(Exprs, New_Args)];
 
 % Sub open brackets rules:
 %   x - (-y) => x + y
 %   x - (a - b) => (x + b) - a
 %   (-x) - y -> =(x + y)
-rule_open_brackets({sub, {X, {neg, Y}}}, _) ->
-    {sum, [X, Y]};
-rule_open_brackets({sub, {X, {sub, {A, B}}}}, _) ->
-    {sub, {{sum, [X, B]}, A}};
-rule_open_brackets({sub, {{neg, X}, Y}}, _) ->
-    {neg, {sum, [X, Y]}};
+rule_open_brackets([sub, X, [neg, Y]], _) ->
+    [sum, X, Y];
+rule_open_brackets([sub, X, [sub, A, B]], _) ->
+    [sub, [sum, X, B], A];
+rule_open_brackets([sub, [neg, X], Y], _) ->
+    [neg, [sum, X, Y]];
 rule_open_brackets(E, _) ->
     E.
 
@@ -842,22 +810,22 @@ rule_collect_negs(E) ->
 -spec rule_collect_negs(E :: expr(), Opts :: options()) -> expr().
 %% @doc
 %% Collect negs.
-rule_collect_negs({mul, Exprs}, _) ->
+rule_collect_negs([mul | Exprs], _) ->
     {New_Exprs, Is_Neg} =
         lists:mapfoldl
         (
             fun
-                ({neg, X}, Acc) ->
+                ([neg, X], Acc) ->
                     {X, Acc xor true};
                 (X, Acc) ->
                     {X, Acc}
             end,
             false, Exprs
         ),
-    Mul = {mul, New_Exprs},
+    Mul = [mul | New_Exprs],
     if
         Is_Neg ->
-            {neg, Mul};
+            [neg, Mul];
         true ->
             Mul
     end;
@@ -876,9 +844,9 @@ rule_split_sum(E) ->
 -spec rule_split_sum(E :: expr(), Opts :: options()) -> expr().
 %% @doc
 %% Split sum.
-rule_split_sum({sum, L} = E, _) when (L =/= []) ->
+rule_split_sum([sum | L] = E, _) when (L =/= []) ->
     {Neg, Pos} = lists:partition(fun is_neg/1, L),
-    Inv_Neg = lists:map(fun({neg, X}) -> X end, Neg),
+    Inv_Neg = lists:map(fun([neg, X]) -> X end, Neg),
     if
         % Only positive members.
         Inv_Neg =:= [] ->
@@ -886,11 +854,11 @@ rule_split_sum({sum, L} = E, _) when (L =/= []) ->
 
         % Only negative members.
         Pos =:= [] ->
-            {neg, {sum, Inv_Neg}};
+            [neg, [sum | Inv_Neg]];
 
         % Positive and negative members.
         true ->
-            {sub, {{sum, Pos}, {sum, Inv_Neg}}}
+            [sub, [sum | Pos], [sum | Inv_Neg]]
     end;
 rule_split_sum(E, _) ->
     E.
