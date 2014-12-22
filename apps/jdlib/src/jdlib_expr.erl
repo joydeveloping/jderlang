@@ -365,6 +365,36 @@ to_string(X) ->
     lists:flatten(io_lib:format("~w", [X])).
 
 %---------------------------------------------------------------------------------------------------
+
+-spec mul_coef(E :: expr()) -> {float(), expr()}.
+%% @doc
+%% Get coefficient of multiplication.
+%%   x => 1
+%%   -x => -1
+%%   5x => 5
+mul_coef([neg, X]) ->
+    {-1, X};
+mul_coef([mul, N, X]) when is_number(N) ->
+    {N, X};
+mul_coef(X) ->
+    {1, X}.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec pow_coef(E :: expr()) -> {float(), expr()}.
+%% @doc
+%% Get coefficient of power.
+%%   x => 1
+%%   1 / x => -1
+%%   x^5 => 5
+pow_coef([dvs, N, X]) when (is_number(N) andalso ?IS_EQ(N, 1)) ->
+    {-1, X};
+pow_coef([pow, X, N]) when is_number(N) ->
+    {N, X};
+pow_coef(X) ->
+    {1, X}.
+
+%---------------------------------------------------------------------------------------------------
 % Options.
 %---------------------------------------------------------------------------------------------------
 
@@ -433,10 +463,8 @@ rules(E, Opts) ->
             rule_collect_items,
             rule_sum_mul_pairs,
             rule_open_brackets,
-            rule_collect_negs
-
-            % Dangerous optimization.
-            %rule_split_sum
+            rule_collect_negs,
+            rule_split_sum
         ],
     lists:foldl(fun(Rule, Cur_E) -> rule(Cur_E, Rule, Opts) end, E, Rules).
 
@@ -723,17 +751,16 @@ rule_sum_mul_pairs(E) ->
 %%   (x^n) * (x^m) => x^(n + m)
 rule_sum_mul_pairs([sum | L] = E, _) ->
     Sum_Pair_F =
-        fun
-            (X, [neg, X]) ->
-                {true, 0};
-            (X, [mul, N, X]) when is_number(N) ->
-                {true, [mul, N + 1, X]};
-            ([mul, N, X], [neg, X]) when is_number(N) ->
-                {true, [mul, N - 1, X]};
-            ([mul, N1, X], [mul, N2, X]) when (is_number(N1) andalso is_number(N2)) ->
-                {true, [mul, N1 + N2, X]};
-            (_, _) ->
-                false
+        fun(X, Y) ->
+            {XC, XF} = mul_coef(X),
+            {YC, YF} = mul_coef(Y),
+            Is_Eq = is_eq(XF, YF),
+            if
+                Is_Eq ->
+                    {true, [mul, XC + YC, XF]};
+                true ->
+                    false
+            end
         end,
     case jdlib_lists:apply_to_any_pair(L, Sum_Pair_F) of
         {true, A1, A2, Res} ->
@@ -745,15 +772,16 @@ rule_sum_mul_pairs([sum | L] = E, _) ->
     end;
 rule_sum_mul_pairs([mul | L] = E, _) ->
     Mul_Pair_F =
-        fun
-            (X, [dvs, 1, X]) ->
-                {true, 1};
-            (X, [pow, X, N]) when is_number(N) ->
-                {true, [pow, X, N + 1]};
-            ([pow, X, N1], [pow, X, N2]) ->
-                {true, [pow, X, N1 + N2]};
-            (_, _) ->
-                false
+        fun(X, Y) ->
+            {XC, XF} = pow_coef(X),
+            {YC, YF} = pow_coef(Y),
+            Is_Eq = is_eq(XF, YF),
+            if
+                Is_Eq ->
+                    {true, [pow, XF, XC + YC]};
+                true ->
+                    false
+            end
         end,
     case jdlib_lists:apply_to_any_pair(L, Mul_Pair_F) of
         {true, A1, A2, Res} ->

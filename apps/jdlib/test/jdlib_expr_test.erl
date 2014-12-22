@@ -206,8 +206,8 @@ rule_collect_negs_test() ->
 %% @doc
 %% Function rule_split_sum test.
 rule_split_sum_test() ->
-    %?assertEqual([sub, [sum, a, c], [sum, b, d]],
-    %             rule_split_sum([sum, a, [neg, b], c, [neg, d]])),
+    ?assertEqual([sub, [sum, a, c], [sum, b, d]],
+                 rule_split_sum([sum, a, [neg, b], c, [neg, d]])),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -312,6 +312,22 @@ simplify_test() ->
     %   sum(5 * x, x, 3 * x, -x) => 8 * x
     %   mul(x^5, x, x^3, 1 / x) => x^8
     ?assertEqual([mul, 8, x], simplify([sum, [mul, 5, x], x, [mul, 3, x], [neg, x]])),
+
+    % Simplify binom.
+    %   (a + b)^5 => a^5 + 5a^4b + 10a^3b^2 + 10a^2b^3 + 5ab^4 + b^5
+    ?assertEqual
+    (
+        [
+            sum,
+            [mul, 5, a, [pow, b, 4]],
+            [mul, 5, b, [pow, a, 4]],
+            [mul, 10, [pow, a, 2], [pow, b, 3]],
+            [mul, 10, [pow, a, 3], [pow, b, 2]],
+            [pow, a, 5],
+            [pow, b, 5]
+        ],
+        simplify(expand_mul(expand_mul(substitute(pow(x, 5), x, sum(a, b)))))
+    ),
 
     ok.
 
