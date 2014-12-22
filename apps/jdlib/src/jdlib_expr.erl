@@ -18,7 +18,7 @@
 
 % Export.
 -export([neg/1, sum/2, sum/1, sub/2, mul/2, mul/1, dvs/2, pow/2,
-         is_neg/1, is_sum/1, is_sub/1, is_mul/1, is_dvs/1, is_pow/1,
+         is_neg/1, is_sum/1, is_sub/1, is_mul/1, is_dvs/1, is_pow/1, is_oper/2,
          is_eq/2, is_const/1, is_polynomial/1,
          substitute/3, expand_mul/1,
          to_string/1,
@@ -226,6 +226,16 @@ is_dvs(_) ->
 is_pow([pow, _, _]) ->
     true;
 is_pow(_) ->
+    false.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec is_oper(E :: expr(), Oper :: operation()) -> boolean().
+%% @doc
+%% Check expression for operation.
+is_oper([Oper | _], Oper) -> 
+    true;
+is_oper(_, _) ->
     false.
 
 %---------------------------------------------------------------------------------------------------
@@ -462,11 +472,10 @@ rule_normalization(E) ->
 %% For float values drops zero fraction:
 %%   N.0 => N
 rule_normalization(E, _) when is_float(E) ->
-    N = trunc(E),
+    F = jdlib_math:fraction(E),
     if
-        ?IS_EQ(E, N) ->
-            N;
-
+        ?IS_EQ(F, 0) ->
+            trunc(E);
         true ->
             E
     end;
@@ -479,33 +488,20 @@ rule_normalization(E, _) when is_float(E) ->
 %   [sum, x] => x
 %   [mul, x] => x
 rule_normalization([Oper | L], _) when ?IS_MULTINARY(Oper) ->
-    {Same_Oper_Exprs, Other_Opers_Exprs} =
-        lists:partition
-        (
-            fun(X) ->
-                case X of
-                    [Oper | _] ->
-                        true;
-                    _ ->
-                        false
-                end
-            end,
-            L
-        ),
+    {Same_Args, Other_Args} = lists:partition(fun(X) -> is_oper(X, Oper) end, L),
     New_Args =
         lists:foldl
         (
             fun([_ | Args], Cur_Args) ->
                 lists:append(Cur_Args, Args)
             end,
-            [], Same_Oper_Exprs
+            [], Same_Args
         ),
-    Sorted_Args = lists:sort(lists:append(Other_Opers_Exprs, New_Args)),
-    case Sorted_Args of
+    case lists:append(Other_Args, New_Args) of
         [Single_Arg] ->
             Single_Arg;
-        _ ->
-            [Oper | Sorted_Args]
+        Many_Args ->
+            [Oper | lists:sort(Many_Args)]
     end;
 rule_normalization(E, _) ->
     E.
