@@ -428,7 +428,25 @@ rules(E, Opts) ->
             % Dangerous optimization.
             %rule_split_sum
         ],
-    lists:foldl(fun(Rule, Cur_E) -> apply(jdlib_expr, Rule, [Cur_E, Opts]) end, E, Rules).
+    lists:foldl(fun(Rule, Cur_E) -> rule(Cur_E, Rule, Opts) end, E, Rules).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec rule(E :: expr(), R :: atom(), Opts :: options()) -> expr().
+%% @doc
+%% Apply single rule.
+%% Apply while it is possible.
+rule(E, R, Opts) ->
+    case apply(jdlib_expr, R, [E, Opts]) of
+
+        % Nothing has changed. End.
+        E ->
+            E;
+
+        % Try to apply optimization one more time.
+        New ->
+            rule(New, R, Opts)
+    end.
 
 %---------------------------------------------------------------------------------------------------
 
