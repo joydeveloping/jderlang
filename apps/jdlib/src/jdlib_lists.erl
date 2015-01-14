@@ -7,7 +7,17 @@
 -module(jdlib_lists).
 
 % Export.
--export([count/2, sorted_histogram/1, apply_to_any_pair/2]).
+-export([count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
+
+%---------------------------------------------------------------------------------------------------
+% Types.
+%---------------------------------------------------------------------------------------------------
+
+% Types export.
+-export_type([sorted_histogram/0]).
+
+% Sorted histogram.
+-type sorted_histogram() :: [{term(), integer()}].
 
 %---------------------------------------------------------------------------------------------------
 % Functions.
@@ -31,7 +41,7 @@ count([H | T], Predicate, I) ->
 
 %---------------------------------------------------------------------------------------------------
 
--spec sorted_histogram(L :: list()) -> [{term(), integer()}].
+-spec sorted_histogram(L :: list()) -> sorted_histogram().
 %% @doc
 %% Sort given list and return its histogram (pairs of unique element and number of its copies).
 sorted_histogram([]) ->
@@ -40,7 +50,7 @@ sorted_histogram(L) ->
     [H | T] = lists:sort(L),
     sorted_histogram(T, [{H, 1}]).
 
--spec sorted_histogram(L :: list(), R :: [{term(), integer()}]) -> [{term(), integer()}].
+-spec sorted_histogram(L :: list(), R :: sorted_histogram()) -> sorted_histogram().
 %% @private
 %% @doc
 %% Build list histogram.
@@ -50,6 +60,36 @@ sorted_histogram([H | T], [{H, C} | RT]) ->
     sorted_histogram(T, [{H, C + 1} | RT]);
 sorted_histogram([H | T], R) ->
     sorted_histogram(T, [{H, 1} | R]).
+%---------------------------------------------------------------------------------------------------
+
+-spec merge_sorted_histograms(HG1 :: sorted_histogram(),
+                              HG2 :: sorted_histogram()) -> sorted_histogram().
+%% @doc
+%% Merge two sorted histograms.
+merge_sorted_histograms(HG1, HG2) ->
+    merge_sorted_histograms(HG1, HG2, []).
+
+-spec merge_sorted_histograms(HG1 :: sorted_histogram(),
+                              HG2 :: sorted_histogram(),
+                              R :: sorted_histogram()) -> sorted_histogram().
+%% @private
+%% @doc
+%% Merge two sorted histograms.
+merge_sorted_histograms([], [], R) ->
+    lists:reverse(R);
+merge_sorted_histograms([], HG, R) ->
+    lists:reverse(R) ++ HG;
+merge_sorted_histograms(HG, [], R) ->
+    lists:reverse(R) ++ HG;
+merge_sorted_histograms([{I1, C1} = H1 | T1] = HG1, [{I2, C2} = H2 | T2] = HG2, R) ->
+    if
+        I1 < I2 ->
+            merge_sorted_histograms(T1, HG2, [H1 | R]);
+        I2 < I1 ->
+            merge_sorted_histograms(HG1, T2, [H2 | R]);
+        true ->
+            merge_sorted_histograms(T1, T2, [{I1, C1 + C2} | R])
+    end.
 
 %---------------------------------------------------------------------------------------------------
 
