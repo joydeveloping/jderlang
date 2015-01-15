@@ -11,10 +11,55 @@
 
 % Functions import.
 -import(jdlib_lists,
-        [count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
+        [head/1, tail/1, last/1, init/1,
+         count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
+%---------------------------------------------------------------------------------------------------
+
+-spec head_test() -> ok.
+%% @doc
+%% Function head test.
+head_test() ->
+    ?assertThrow({badarg, []}, head([])),
+    ?assertEqual(head([1]), 1),
+    ?assertEqual(head([a, b]), a),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec tail_test() -> ok.
+%% @doc
+%% Function tail test.
+tail_test() ->
+    ?assertThrow({badarg, []}, tail([])),
+    ?assertEqual(tail([1]), []),
+    ?assertEqual(tail([a, b]), [b]),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec last_test() -> ok.
+%% @doc
+%% Function last test.
+last_test() ->
+    ?assertThrow({badarg, []}, last([])),
+    ?assertEqual(last([1]), 1),
+    ?assertEqual(last([a, b]), b),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec init_test() -> ok.
+%% @doc
+%% Function init test.
+init_test() ->
+    ?assertThrow({badarg, []}, init([])),
+    ?assertEqual(init([1]), []),
+    ?assertEqual(init([a, b]), [a]),
+    ok.
+
 %---------------------------------------------------------------------------------------------------
 
 -spec count_test() -> ok.

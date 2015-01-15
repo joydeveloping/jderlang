@@ -7,7 +7,8 @@
 -module(jdlib_lists).
 
 % Export.
--export([count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
+-export([head/1, tail/1, last/1, init/1,
+         count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Types.
@@ -21,6 +22,48 @@
 
 %---------------------------------------------------------------------------------------------------
 % Functions.
+%---------------------------------------------------------------------------------------------------
+
+-spec head(L :: list()) -> term().
+%% @doc
+%% Head of list.
+head([]) ->
+    throw({badarg, []});
+head([H | _]) ->
+    H.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec tail(L :: list()) -> list().
+%% @doc
+%% Tail of list.
+tail([]) ->
+    throw({badarg, []});
+tail([_ | T]) ->
+    T.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec last(L :: list()) -> term().
+%% @doc
+%% Last element of a list.
+last([]) ->
+    throw({badarg, []});
+last([E]) ->
+    E;
+last([_ | T]) ->
+    last(T).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec init(L :: list()) -> list().
+%% @doc
+%% Initial list (list without last element).
+init([]) ->
+    throw({badarg, []});
+init(L) ->
+    lists:reverse(tail(lists:reverse(L))).
+
 %---------------------------------------------------------------------------------------------------
 
 -spec count(L :: list(), Predicate :: fun((term()) -> boolean())) -> integer().
