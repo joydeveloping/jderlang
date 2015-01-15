@@ -11,7 +11,8 @@
 
 % Functions import.
 -import(jdlib,
-        [fst/1, snd/1]).
+        [fst/1, snd/1,
+         flip/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -33,6 +34,19 @@ fst_test() ->
 snd_test() ->
     ?assertEqual(b, snd({a, b})),
     ?assertThrow({badarg, _}, snd(a)),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec flip_test() -> ok.
+%% @doc
+%% Function flip test.
+flip_test() ->
+    ?assertThrow({badarg, _}, flip(5)),
+    Minus_F = fun(X, Y) -> X - Y end,
+    Flip_Minus_F = flip(Minus_F),
+    ?assertEqual(5, Minus_F(10, 5)),
+    ?assertEqual(-5, Flip_Minus_F(10, 5)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

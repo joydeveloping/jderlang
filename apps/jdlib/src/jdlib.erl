@@ -7,7 +7,8 @@
 -module(jdlib).
 
 % Export.
--export([fst/1, snd/1]).
+-export([fst/1, snd/1,
+         flip/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Types.
@@ -40,6 +41,20 @@ snd({_, T}) ->
     T;
 snd(P) ->
     throw({badarg, P}).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec flip(F) -> G
+      when F :: fun((term(), term()) -> term()),
+           G :: fun((term(), term()) -> term()).
+%% @doc
+%% Haskell like function flip.
+%% It has one argument - function of two arguments f(x, y)
+%% and returns function of two arguments g(x, y) = f(y, x).
+flip(F) when is_function(F, 2) ->
+    fun(X, Y) -> F(Y, X) end;
+flip(T) ->
+    throw({badarg, T}).
 
 %---------------------------------------------------------------------------------------------------
 
