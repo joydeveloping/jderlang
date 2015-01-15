@@ -8,6 +8,7 @@
 
 % Export.
 -export([head/1, tail/1, last/1, init/1,
+         is_null/1, take/2, drop/2, product/1, duplicate_list/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
@@ -63,6 +64,56 @@ init([]) ->
     throw({badarg, []});
 init(L) ->
     lists:reverse(tail(lists:reverse(L))).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec is_null(L :: list()) -> boolean().
+%% @doc
+%% Check if list is empty.
+is_null([]) ->
+    true;
+is_null(_) ->
+    false.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec take(L :: list(), N :: integer()) -> list().
+%% @doc
+%% Take first elements of list.
+%% If list contains less elements than needed returns whole list.
+take(L, N) when (length(L) =< N) ->
+    L;
+take(L, N) ->
+    {L1, _} = lists:split(N, L),
+    L1.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec drop(L :: list(), N :: integer()) -> list().
+%% @doc
+%% Drop first elements from given list.
+%% If count of elements to drop is bigger than list length returns empty list.
+drop(L, N) when (length(L) =< N) ->
+    [];
+drop(L, N) ->
+    {_, L2} = lists:split(N, L),
+    L2.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec product(L :: list()) -> number().
+%% @doc
+%% Multiplicate all elements of list.
+product(L) ->
+    lists:foldl(fun(X, Y) -> X * Y end, 1, L).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec duplicate_list(L :: list(), N :: integer()) -> list().
+%% @doc
+%% Duplicate given list.
+duplicate_list(L, N) ->
+    lists:append(lists:duplicate(N, L)).
 
 %---------------------------------------------------------------------------------------------------
 
