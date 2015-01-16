@@ -69,6 +69,7 @@ init_test() ->
 is_null_test() ->
     ?assertEqual(true, is_null([])),
     ?assertEqual(false, is_null([a, b, c])),
+    ?assertThrow({badarg, _}, is_null(5)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

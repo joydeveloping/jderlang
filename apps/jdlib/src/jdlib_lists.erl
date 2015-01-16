@@ -72,8 +72,10 @@ init(L) ->
 %% Check if list is empty.
 is_null([]) ->
     true;
-is_null(_) ->
-    false.
+is_null(L) when is_list(L) ->
+    false;
+is_null(T) ->
+    throw({badarg, T}).
 
 %---------------------------------------------------------------------------------------------------
 
