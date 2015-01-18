@@ -9,6 +9,7 @@
 % Export.
 -export([head/1, tail/1, last/1, init/1,
          is_null/1, take/2, drop/2, product/1, duplicate_list/2,
+         foldl_1/2, foldr_1/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
@@ -106,8 +107,10 @@ drop(L, N) ->
 -spec product(L :: list()) -> number().
 %% @doc
 %% Multiplicate all elements of list.
+product([]) ->
+    1;
 product(L) ->
-    lists:foldl(fun(X, Y) -> X * Y end, 1, L).
+    foldl_1(fun jdlib_math:mul/2, L).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -116,6 +119,26 @@ product(L) ->
 %% Duplicate given list.
 duplicate_list(L, N) ->
     lists:append(lists:duplicate(N, L)).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec foldl_1(fun((term(), term()) -> term()), list()) -> term().
+%% @doc
+%% Function foldl with Acc0 is head of list.
+foldl_1(_, []) ->
+    throw({badarg, []});
+foldl_1(F, [H | T]) ->
+    lists:foldl(F, H, T).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec foldr_1(fun((term(), term()) -> term()), list()) -> term().
+%% @doc
+%% Function foldr with Acc0 is head of list.
+foldr_1(_, []) ->
+    throw({badarg, []});
+foldr_1(F, L) ->
+    lists:foldr(F, last(L), init(L)).
 
 %---------------------------------------------------------------------------------------------------
 

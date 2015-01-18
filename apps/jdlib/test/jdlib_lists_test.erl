@@ -13,6 +13,7 @@
 -import(jdlib_lists,
         [head/1, tail/1, last/1, init/1,
          is_null/1, take/2, drop/2, product/1, duplicate_list/2,
+         foldl_1/2, foldr_1/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
@@ -115,6 +116,28 @@ duplicate_list_test() ->
     ?assertEqual([], duplicate_list([a, b, c], 0)),
     ?assertEqual([a, b, c], duplicate_list([a, b, c], 1)),
     ?assertEqual([a, b, c, a, b, c, a, b, c], duplicate_list([a, b, c], 3)),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec foldl_1_test() -> ok.
+%% @doc
+%% Function foldl_1 test.
+foldl_1_test() ->
+    ?assertThrow({badarg, _}, foldl_1(fun ldlib_math:add/2, [])),
+    ?assertEqual(5, foldl_1(fun jdlib_math:add/2, [5])),
+    ?assertEqual(11, foldl_1(fun jdlib_math:add/2, [5, 6])),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec foldr_1_test() -> ok.
+%% @doc
+%% Function foldr_1 test.
+foldr_1_test() ->
+    ?assertThrow({badarg, _}, foldr_1(fun jdlib_math:sub/2, [])),
+    ?assertEqual(5, foldr_1(fun jdlib_math:sub/2, [5])),
+    ?assertEqual(2, foldr_1(fun jdlib_math:sub/2, [1, 2, 3])),
     ok.
 
 %---------------------------------------------------------------------------------------------------
