@@ -83,15 +83,26 @@ tail({H, Acc, F}) ->
 %% @doc
 %% Take first elements of infinite list.
 take(IL, N) ->
-    {IL, N}.
+    take(IL, N, []).
+
+-spec take(IL :: inflist(), N :: integer(), R :: list()) -> list().
+%% @private
+%% @doc
+%% Take first elements of infinite list.
+take(_, 0, R) ->
+    lists:reverse(R);
+take(IL, N, R) ->
+    take(tail(IL), N - 1, [head(IL) | R]).
 
 %---------------------------------------------------------------------------------------------------
 
 -spec drop(IL :: inflist(), N :: integer()) -> inflist().
 %% @doc
 %% Drop first elements of infinite list.
+drop(IL, 0) ->
+    IL;
 drop(IL, N) ->
-    {IL, N}.
+    drop(tail(IL), N - 1).
 
 %---------------------------------------------------------------------------------------------------
 
