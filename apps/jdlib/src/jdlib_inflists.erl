@@ -7,7 +7,8 @@
 -module(jdlib_inflists).
 
 % Export.
--export([repeat/1, cycle/1,
+-export([iterate/3, iterate/2,
+         repeat/1, cycle/1,
          head/1, tail/1,
          take/2, drop/2]).
 
@@ -18,11 +19,52 @@
 % Types export.
 -export_type([inflist/0]).
 
+% Define infinite list as record.
+-record(inflist,
+{
+    h :: term(),
+    acc :: term(),
+    f :: fun((term(), term()) -> {term(), term()})
+}).
+
 % Inifinite list.
--type inflist() :: {term(), term(), fun()}.
+-type inflist() :: #inflist{}.
 
 %---------------------------------------------------------------------------------------------------
 % Infinite lists constructors.
+%---------------------------------------------------------------------------------------------------
+
+-spec iterate(H :: term(), Acc :: term(), F) -> inflist()
+      when F :: fun((term(), term()) -> {term(), term()}).
+%% @doc
+%% Create infinite list with head, accumulator and iterate function.
+iterate(H, Acc, F) when is_function(F, 2) ->
+    #inflist
+    {
+        h = H,
+        acc = Acc,
+        f = F
+    };
+iterate(_, _, F) ->
+    throw({badarg, {F, wrong_arity}}).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec iterate(H :: term(), F :: fun((term()) -> term())) -> inflist().
+%% @doc
+%% Create infinite list with head and iterate function.
+iterate(H, F) when is_function(F, 1) ->
+    iterate
+    (
+        H,
+        0,
+        fun(Cur_H, _) ->
+            {F(Cur_H), 0}
+        end
+    );
+iterate(_, F) ->
+    throw({badarg, {F, wrong_arity}}).
+
 %---------------------------------------------------------------------------------------------------
 
 -spec repeat(T :: term()) -> inflist().
@@ -30,13 +72,13 @@
 %% Construct infinite list, containing one repeating element.
 %% T -> [T, T, ..]
 repeat(T) ->
-    {
+    iterate
+    (
         T,
-        0,
-        fun(_, _) ->
-            {T, 0}
+        fun(_) ->
+            T
         end
-    }.
+    ).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -47,7 +89,8 @@ repeat(T) ->
 cycle([]) ->
     throw({badarg, []});
 cycle([H | T]) ->
-    {
+    iterate
+    (
         H,
         T,
         fun
@@ -56,7 +99,7 @@ cycle([H | T]) ->
             (_, [Cur_H | Cur_T]) ->
                 {Cur_H, Cur_T}
         end
-    }.
+    ).
 
 %---------------------------------------------------------------------------------------------------
 % Take elements.
@@ -65,17 +108,17 @@ cycle([H | T]) ->
 -spec head(IL :: inflist()) -> term().
 %% @doc
 %% Head of infinite list.
-head({H, _, _}) ->
-    H.
+head(IL) when is_record(IL, inflist) ->
+    IL#inflist.h.
 
 %---------------------------------------------------------------------------------------------------
 
 -spec tail(IL :: inflist()) -> inflist().
 %% @doc
 %% Tail of infinite list.
-tail({H, Acc, F}) ->
+tail(#inflist{h = H, acc = Acc, f = F} = IL) ->
     {New_H, New_Acc} = F(H, Acc),
-    {New_H, New_Acc, F}.
+    IL#inflist{h = New_H, acc = New_Acc}.
 
 %---------------------------------------------------------------------------------------------------
 
