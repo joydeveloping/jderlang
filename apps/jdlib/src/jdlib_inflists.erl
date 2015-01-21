@@ -8,7 +8,7 @@
 
 % Export.
 -export([iterate/3, iterate/2,
-         repeat/1, cycle/1,
+         repeat/1, cycle/1, seq/2, seq/1, geometric_series/2,
          head/1, tail/1,
          take/2, drop/2]).
 
@@ -98,6 +98,42 @@ cycle([H | T]) ->
                 {H, T};
             (_, [Cur_H | Cur_T]) ->
                 {Cur_H, Cur_T}
+        end
+    ).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec seq(From :: number(), Step :: number()) -> inflist().
+%% @doc
+%% Construct inflinite list [From, From + Step, From + 2 * Step, ..].
+seq(From, Step) ->
+    iterate
+    (
+        From,
+        fun(H) ->
+            H + Step
+        end
+    ).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec seq(From :: number()) -> inflist().
+%% @doc
+%% Construct infinite list [From, From + 1, From + 2, ..].
+seq(From) ->
+    seq(From, 1).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec geometric_series(Base :: number(), K :: number()) -> inflist().
+%% @doc
+%% Construct infinite list [Base, Base * K, Base * K^2, ..].
+geometric_series(Base, K) ->
+    iterate
+    (
+        Base,
+        fun(H) ->
+            H * K
         end
     ).
 

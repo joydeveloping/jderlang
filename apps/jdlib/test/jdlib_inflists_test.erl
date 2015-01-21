@@ -11,7 +11,7 @@
 
 % Functions import.
 -import(jdlib_inflists,
-        [repeat/1, cycle/1,
+        [repeat/1, cycle/1, seq/2, seq/1, geometric_series/2,
          head/1, tail/1,
          take/2, drop/2]).
 
@@ -44,6 +44,25 @@ cycle_test() ->
     L3 = tail(L2),
     L4 = tail(L3),
     ?assertEqual({a, b, a, b, a}, {head(L), head(L1), head(L2), head(L3), head(L4)}),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec seq_test() -> ok.
+%% @doc
+%% Function seq test.
+seq_test() ->
+    ?assertEqual([5, 7, 9], take(drop(seq(1, 2), 2), 3)),
+    ?assertEqual([10, 11, 12, 13, 14], take(drop(seq(1), 9), 5)),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec geometric_series_test() -> ok.
+%% @doc
+%% Function geometric_series test.
+geometric_series_test() ->
+    ?assertEqual([12, 24, 48], take(drop(geometric_series(3, 2), 2), 3)),
     ok.
 
 %---------------------------------------------------------------------------------------------------
