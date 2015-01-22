@@ -13,7 +13,7 @@
 -import(jdlib_lists,
         [head/1, tail/1, last/1, init/1,
          is_null/1, take/2, drop/2, product/1, duplicate_list/2,
-         foldl_1/2, foldr_1/2,
+         foldl_1/2, foldr_1/2, adj_pairs_map/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
@@ -138,6 +138,18 @@ foldr_1_test() ->
     ?assertThrow({badarg, _}, foldr_1(fun jdlib_math:sub/2, [])),
     ?assertEqual(5, foldr_1(fun jdlib_math:sub/2, [5])),
     ?assertEqual(2, foldr_1(fun jdlib_math:sub/2, [1, 2, 3])),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec adj_pairs_map_test() -> ok.
+%% @doc
+%% Function adj_pairs_map test.
+adj_pairs_map_test() ->
+    ?assertEqual([], adj_pairs_map([], fun(X, Y) -> X == Y end)),
+    ?assertEqual([], adj_pairs_map([], fun(X, Y) -> X + Y end)),
+    L = [1, 2, 4, 7, 11],
+    ?assertEqual([1, 2, 3, 4], adj_pairs_map(L, fun(X, Y) -> Y - X end)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

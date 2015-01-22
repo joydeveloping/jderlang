@@ -9,7 +9,7 @@
 % Export.
 -export([head/1, tail/1, last/1, init/1,
          is_null/1, take/2, drop/2, product/1, duplicate_list/2,
-         foldl_1/2, foldr_1/2,
+         foldl_1/2, foldr_1/2, adj_pairs_map/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
 %---------------------------------------------------------------------------------------------------
@@ -139,6 +139,29 @@ foldr_1(_, []) ->
     throw({badarg, []});
 foldr_1(F, L) ->
     lists:foldr(F, last(L), init(L)).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec adj_pairs_map(L, fun((E, E) -> Res_E)) -> Res_L
+      when L :: [E], Res_L :: [Res_E], E :: term(), Res_E :: term().
+%% @doc
+%% Applies function to every pair of adjacent elements of the list
+%% and returns list of results.
+adj_pairs_map(L, _) when (length(L) < 2) ->
+    [];
+adj_pairs_map(L, F) ->
+    adj_pairs_map(L, F, []).
+
+-spec adj_pairs_map(L, fun((E, E) -> Res_E), Res_L) -> Res_L
+      when L :: [E], Res_L :: [Res_E], E :: term(), Res_E :: term().
+%% @private
+%% @doc
+%% Applies function to every pair of adjacent elements of the list
+%% and returns list of results.
+adj_pairs_map([_], _, R) ->
+    lists:reverse(R);
+adj_pairs_map([H1 | [H2 | _] = T], F, R) ->
+    adj_pairs_map(T, F, [F(H1, H2) | R]).
 
 %---------------------------------------------------------------------------------------------------
 
