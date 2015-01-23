@@ -12,7 +12,7 @@
 % Functions import.
 -import(jdlib_lists,
         [head/1, tail/1, last/1, init/1,
-         is_null/1, take/2, drop/2, product/1, duplicate_list/2,
+         is_null/1, take/2, drop/2, product/1, minmax/1, duplicate_list/2,
          foldl_1/2, foldr_1/2, adj_pairs_map/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
@@ -105,6 +105,17 @@ product_test() ->
     ?assertEqual(1, product([])),
     ?assertEqual(3, product([3])),
     ?assertEqual(24, product([2, 3, 4])),
+    ok.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec minmax_test() -> ok.
+%% @doc
+%% Function minmax test.
+minmax_test() ->
+    ?assertThrow({badarg, _}, minmax([])),
+    ?assertEqual({5, 5}, minmax([5])),
+    ?assertEqual({2, 9}, minmax([3, 5, 2, 6, 9])),
     ok.
 
 %---------------------------------------------------------------------------------------------------

@@ -8,7 +8,7 @@
 
 % Export.
 -export([head/1, tail/1, last/1, init/1,
-         is_null/1, take/2, drop/2, product/1, duplicate_list/2,
+         is_null/1, take/2, drop/2, product/1, minmax/1, duplicate_list/2,
          foldl_1/2, foldr_1/2, adj_pairs_map/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
 
@@ -104,13 +104,40 @@ drop(L, N) ->
 
 %---------------------------------------------------------------------------------------------------
 
--spec product(L :: list()) -> number().
+-spec product(L :: [number()]) -> number().
 %% @doc
 %% Multiplicate all elements of list.
 product([]) ->
     1;
 product(L) ->
     foldl_1(fun jdlib_math:mul/2, L).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec minmax(L :: [number()]) -> {number(), number()}.
+%% @doc
+%% Simultaneous search minimum and maximum elements of the list.
+minmax([]) ->
+    throw({badarg, []});
+minmax([H | T]) ->
+    minmax(T, {H, H}).
+
+-spec minmax(L :: [number()], {number(), number()}) -> {number(), number()}.
+%% @doc
+%% Simultaneous search minimum and maximum elements of the list.
+minmax([], R) ->
+    R;
+minmax([H], {Min, Max}) ->
+    {min(Min, H), max(Max, H)};
+minmax([H1, H2 | T], {Min, Max}) ->
+    R =
+        if
+            H1 < H2 ->
+                {min(Min, H1), max(Max, H2)};
+            true ->
+                {min(Min, H2), max(Max, H1)}
+        end,
+    minmax(T, R).
 
 %---------------------------------------------------------------------------------------------------
 
