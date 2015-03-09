@@ -1,7 +1,7 @@
 %% @doc
 %% Tests for jdlib_math.
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_math_test).

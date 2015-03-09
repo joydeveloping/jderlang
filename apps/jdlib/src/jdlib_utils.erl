@@ -1,7 +1,7 @@
 %% @doc
 %% Some util functions realization.
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_utils).

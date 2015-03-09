@@ -11,7 +11,7 @@
 %%   <li><tt>pow</tt> - возведение в степень(<tt>x^y</tt>)</li>
 %% </ul
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_expr).

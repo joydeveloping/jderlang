@@ -1,7 +1,7 @@
 %% @doc
 %% Tests for jdlib_lists.
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_lists_test).

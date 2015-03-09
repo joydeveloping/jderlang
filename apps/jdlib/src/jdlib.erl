@@ -1,7 +1,7 @@
 %% @doc
 %% General functions of jdlib.
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib).

@@ -1,7 +1,7 @@
 %% @doc
 %% Mathematical functions realization.
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_math).

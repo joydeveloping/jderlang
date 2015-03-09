@@ -1,7 +1,7 @@
 %% @doc
 %% Some additional lists functions realization.
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_lists).

@@ -1,7 +1,7 @@
 %% @doc
 %% Tests for jdlib_realline.
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_realline_test).

@@ -33,7 +33,7 @@
 %%   <li><tt>L</tt> - locus (a set of shapes)</li>
 %% </ul>
 %%
-%% Copyright Joy Developing.
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_realline).

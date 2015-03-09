@@ -1,8 +1,7 @@
 %% @doc
 %% 3D geometry functions.
 %%
-%% Copyright Joy Developing.
-%% test
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_geom3d).
