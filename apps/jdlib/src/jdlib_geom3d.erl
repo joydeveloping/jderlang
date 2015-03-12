@@ -8,7 +8,9 @@
 
 % Export.
 -export([v_make/3, v_make/0, v_is/1, v_x/1, v_y/1, v_z/1, v_xyz/1,
-         v_add/2, v_sub/2, v_neg/1, v_mul/2, v_dvs/2, v_inv/1]).
+         v_add/2, v_sub/2, v_neg/1, v_mul/2, v_dvs/2, v_inv/1,
+         v_add_mul/3, v_med/2, v_inner/3, v_norm/1,
+         v_mod2/1, v_mod/1, v_dist/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -174,6 +176,74 @@ v_dvs(V1, V2) ->
 %% Invert.
 v_inv(V) ->
     v_dvs(1, V).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_add_mul(V1 :: vector(), V2 :: vector(), K :: number()) -> vector().
+%% @doc
+%% Add to vector V1 vector V2 multiplied on K.
+v_add_mul(V1, V2, K) ->
+    v_add(V1, v_mul(V2, K)).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_med(V1 :: vector(), V2 :: vector()) -> vector().
+%% @doc
+%% Median of two vecttors.
+v_med(V1, V2) ->
+    v_mul(0.5, v_add(V1, V2)).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_inner(V1 :: vector(), V2 :: vector(), K :: number()) -> vector().
+%% @doc
+%% Inner vector for K from 0 to 1.
+%% When K = 0, inner vector is V1.
+%% When K = 1, inner vector is V2.
+v_inner(V1, V2, K) when ((K >= 0) andalso (K =< 1)) ->
+    v_add_mul(V1, v_sub(V2, V1), K);
+v_inner(_, _, K) ->
+    throw({badarg, K}).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_norm(V :: vector()) -> vector().
+%% @doc
+%% Normalize vector.
+v_norm(V) ->
+    M = v_mod(V),
+    if
+        M == 0 ->
+            throw({badarg, V});
+        true ->
+            v_dvs(V, M)
+    end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_mod2(V :: vector()) -> number().
+%% @doc
+%% Square of module.
+v_mod2(#vector{x = X, y = Y, z = Z}) ->
+    X * X + Y * Y + Z * Z;
+v_mod2(V) ->
+    throw({badarg, V}).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_mod(V :: vector()) -> number().
+%% @doc
+%% Module.
+v_mod(V) ->
+    math:sqrt(v_mod2(V)).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_dist(V1 :: vector(), V2 :: vector()) -> number().
+%% @doc
+%% Distance.
+v_dist(V1, V2) ->
+    v_mod(v_sub(V1, V2)).
 
 %---------------------------------------------------------------------------------------------------
 

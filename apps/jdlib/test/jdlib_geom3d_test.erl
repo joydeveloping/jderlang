@@ -12,7 +12,9 @@
 % Functions import.
 -import(jdlib_geom3d,
         [v_make/3, v_make/0, v_is/1, v_x/1, v_y/1, v_z/1, v_xyz/1,
-         v_add/2, v_sub/2, v_neg/1, v_mul/2, v_dvs/2, v_inv/1]).
+         v_add/2, v_sub/2, v_neg/1, v_mul/2, v_dvs/2, v_inv/1,
+         v_add_mul/3, v_med/2, v_inner/3, v_norm/1,
+         v_mod2/1, v_mod/1, v_dist/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -47,6 +49,11 @@ vector_test() ->
     ?assert({1 / 2, 1, 3 / 2} == v_xyz(v_dvs(V1, 2))),
     ?assert({2, 1, 2 / 3} == v_xyz(v_dvs(2, V1))),
     ?assert(2 == v_dvs(4, 2)),
+    ?assert(14 == v_mod2(V1)),
+    ?assert(math:sqrt(14) == v_mod(V1)),
+    ?assert(math:sqrt(8) == v_dist(V1, V2)),
+    ?assert(v_med(V1, V2) == v_inner(V1, V2, 0.5)),
+    ?assert(1 == v_mod(v_norm(V1))),
     ok.
 
 %---------------------------------------------------------------------------------------------------
