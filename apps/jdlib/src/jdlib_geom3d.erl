@@ -10,7 +10,10 @@
 -export([v_make/3, v_make/0, v_is/1, v_x/1, v_y/1, v_z/1, v_xyz/1,
          v_add/2, v_sub/2, v_neg/1, v_mul/2, v_dvs/2, v_inv/1,
          v_add_mul/3, v_med/2, v_inner/3, v_norm/1,
-         v_mod2/1, v_mod/1, v_dist/2]).
+         v_mod_2/1, v_mod/1, v_dist/2, v_scalar/2,
+         line_by_two_points/2,
+         sphere_make/2,
+         sphere_line_intersection_t/2, sphere_line_intersection/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -21,7 +24,7 @@
 %---------------------------------------------------------------------------------------------------
 
 % Types export.
--export_type([vector/0]).
+-export_type([vector/0, line/0, sphere/0, spheres_nest/0]).
 
 % Define vector as record.
 -record(vector,
@@ -31,8 +34,38 @@
     z :: number()
 }).
 
+% Define line as record.
+-record(line,
+{
+    p :: vector(),
+    v :: vector()
+}).
+
+% Define sphere as record.
+-record(sphere,
+{
+    c :: vector(),
+    r :: number()
+}).
+
+% Define spheres nest as record.
+-record(spheres_nest,
+{
+    s1 :: sphere(),
+    s2 :: sphere()
+}).
+
 % Vector.
 -type vector() :: #vector{}.
+
+% Line.
+-type line() :: #line{}.
+
+% Sphere.
+-type sphere() :: #sphere{}.
+
+% Spheres nest.
+-type spheres_nest() :: #spheres_nest{}.
 
 %---------------------------------------------------------------------------------------------------
 % Vector functions.
@@ -221,12 +254,12 @@ v_norm(V) ->
 
 %---------------------------------------------------------------------------------------------------
 
--spec v_mod2(V :: vector()) -> number().
+-spec v_mod_2(V :: vector()) -> number().
 %% @doc
 %% Square of module.
-v_mod2(#vector{x = X, y = Y, z = Z}) ->
+v_mod_2(#vector{x = X, y = Y, z = Z}) ->
     X * X + Y * Y + Z * Z;
-v_mod2(V) ->
+v_mod_2(V) ->
     throw({badarg, V}).
 
 %---------------------------------------------------------------------------------------------------
@@ -235,7 +268,7 @@ v_mod2(V) ->
 %% @doc
 %% Module.
 v_mod(V) ->
-    math:sqrt(v_mod2(V)).
+    math:sqrt(v_mod_2(V)).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -244,6 +277,83 @@ v_mod(V) ->
 %% Distance.
 v_dist(V1, V2) ->
     v_mod(v_sub(V1, V2)).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_scalar(V1 :: vector(), V2 :: vector()) -> number().
+%% @doc
+%% Scalar product.
+v_scalar(#vector{x = X1, y = Y1, z = Z1}, #vector{x = X2, y = Y2, z = Z2}) ->
+    X1 * X2 + Y1 * Y2 + Z1 * Z2.
+
+%---------------------------------------------------------------------------------------------------
+% Line functions.
+%---------------------------------------------------------------------------------------------------
+
+-spec line_by_two_points(V1 :: vector(), V2 :: vector()) -> line().
+%% @doc
+%% Make line by two points.
+line_by_two_points(V1, V2) when V1 == V2 ->
+    throw({badarg, {V1, V2}});
+line_by_two_points(V1, V2) ->
+    #line
+    {
+        p = V1,
+        v = v_sub(V2, V1)
+    }.
+
+%---------------------------------------------------------------------------------------------------
+% Sphere functions.
+%---------------------------------------------------------------------------------------------------
+
+-spec sphere_make(C :: vector(), R :: number()) -> sphere().
+%% @doc
+sphere_make(C, R) ->
+    #sphere
+    {
+        c = C,
+        r = R
+    }.
+
+%---------------------------------------------------------------------------------------------------
+% Intersection.
+%---------------------------------------------------------------------------------------------------
+
+-spec sphere_vector_intersection_t(S :: sphere(), V :: vector()) -> [number()].
+%% @doc
+%% Find T paramenets of intersection sphere and line (0, V)
+sphere_vector_intersection_t(#sphere{c = C, r = R}, V) ->
+    VV = v_mod_2(V),
+    CV = v_scalar(C, V),
+    QD = CV * CV - VV * (v_mod_2(C) - R * R),
+    if
+        CV < 0 ->
+            [];
+        true ->
+            DS = math:sqrt(QD),
+            [(CV + DS) / VV, (CV - DS) / VV]
+    end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec sphere_line_intersection_t(S :: sphere(), L :: line()) -> [number()].
+%% @doc
+%% Find T parameters of intersection sphere and line.
+sphere_line_intersection_t(#sphere{c = C, r = R}, #line{p = P, v = V}) ->
+    sphere_vector_intersection_t(sphere_make(v_sub(C, P), R), V).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec sphere_line_intersection(S :: sphere(), L :: line()) -> [vector()].
+%% @doc
+%% Find sphere and line intersection.
+sphere_line_intersection(S, #line{p = P, v = V} = L) ->
+    case sphere_line_intersection_t(S, L) of
+        [] ->
+            [];
+        [T1, T2] ->
+            [v_add_mul(P, V, T1), v_add_mul(P, V, T2)]
+    end.
 
 %---------------------------------------------------------------------------------------------------
 
