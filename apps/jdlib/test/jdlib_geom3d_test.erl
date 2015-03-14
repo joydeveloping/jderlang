@@ -58,6 +58,7 @@ vector_test() ->
     ?assert(v_med(V1, V2) == v_inner(V1, V2, 0.5)),
     ?assert(1 == v_mod(v_norm(V1))),
     ?assert(v_mod_2(V1) == v_scalar(V1, V1)),
+    ?assert(v_mod_2(V2) == v-scalar(V2, V2)),
     ok.
 
 %---------------------------------------------------------------------------------------------------
