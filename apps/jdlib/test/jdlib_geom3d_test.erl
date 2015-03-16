@@ -16,8 +16,9 @@
          v_add_mul/3, v_med/2, v_inner/3, v_norm/1,
          v_mod_2/1, v_mod/1, v_dist/2, v_scalar/2,
          line_by_two_points/2,
-         sphere_make/2,
-         sphere_line_intersection_t/2, sphere_line_intersection/2]).
+         sphere_make/2, spheres_nest_make/2,
+         sphere_line_intersection_t/2, sphere_line_intersection/2,
+         spheres_nest_line_intersection_t/2, spheres_nest_line_intersection/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -58,7 +59,7 @@ vector_test() ->
     ?assert(v_med(V1, V2) == v_inner(V1, V2, 0.5)),
     ?assert(1 == v_mod(v_norm(V1))),
     ?assert(v_mod_2(V1) == v_scalar(V1, V1)),
-    ?assert(v_mod_2(V2) == v-scalar(V2, V2)),
+    ?assert(v_mod_2(V2) == v_scalar(V2, V2)),
     ok.
 
 %---------------------------------------------------------------------------------------------------
@@ -69,10 +70,15 @@ vector_test() ->
 intersection_test() ->
     Z = v_make(),
     L1 = line_by_two_points(Z, v_make(1, 1, 1)),
+    L2 = line_by_two_points(Z, v_make(1, 0, 0)),
     S1 = sphere_make(Z, 1),
     [P1, P2] = sphere_line_intersection(S1, L1),
     ?assert(1 == v_mod(P1)),
     ?assert(1 == v_mod(P2)),
+    SN1 = spheres_nest_make(sphere_make(v_make(1, -3, 0), 1), sphere_make(v_make(3, 3, 0), 1)),
+    [{vector, X1, _, _}, {vector, X2, _, _}] = spheres_nest_line_intersection(SN1, L2),
+    ?assert(jdlib_math:is_eq(X1, 0.9459074466105408)),
+    ?assert(jdlib_math:is_eq(X2, 3.0540925533894603)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

@@ -12,8 +12,9 @@
          v_add_mul/3, v_med/2, v_inner/3, v_norm/1,
          v_mod_2/1, v_mod/1, v_dist/2, v_scalar/2,
          line_by_two_points/2,
-         sphere_make/2,
-         sphere_line_intersection_t/2, sphere_line_intersection/2]).
+         sphere_make/2, spheres_nest_make/2,
+         sphere_line_intersection_t/2, sphere_line_intersection/2,
+         spheres_nest_line_intersection_t/2, spheres_nest_line_intersection/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -308,11 +309,24 @@ line_by_two_points(V1, V2) ->
 
 -spec sphere_make(C :: vector(), R :: number()) -> sphere().
 %% @doc
+%% Make sphere.
 sphere_make(C, R) ->
     #sphere
     {
         c = C,
         r = R
+    }.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec spheres_nest_make(S1 :: sphere(), S2 :: sphere()) -> spheres_nest().
+%% @doc
+%% Make spheres nest.
+spheres_nest_make(S1, S2) ->
+    #spheres_nest
+    {
+        s1 = S1,
+        s2 = S2
     }.
 
 %---------------------------------------------------------------------------------------------------
@@ -331,7 +345,7 @@ sphere_vector_intersection_t(#sphere{c = C, r = R}, V) ->
             [];
         true ->
             DS = math:sqrt(QD),
-            [(CV + DS) / VV, (CV - DS) / VV]
+            [(CV - DS) / VV, (CV + DS) / VV]
     end.
 
 %---------------------------------------------------------------------------------------------------
@@ -349,6 +363,80 @@ sphere_line_intersection_t(#sphere{c = C, r = R}, #line{p = P, v = V}) ->
 %% Find sphere and line intersection.
 sphere_line_intersection(S, #line{p = P, v = V} = L) ->
     case sphere_line_intersection_t(S, L) of
+        [] ->
+            [];
+        [T1, T2] ->
+            [v_add_mul(P, V, T1), v_add_mul(P, V, T2)]
+    end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec spheres_nest_vector_intersection_t(SN :: spheres_nest(), V :: vector()) -> [number()].
+%% @doc
+%% Find T parameters of intersection spheres nest and line (0, V).
+spheres_nest_vector_intersection_t(#spheres_nest{s1 = #sphere{c = C1, r = R1},
+                                                 s2 = #sphere{c = C2, r = R2}}, V) ->
+
+    % First we have to find spheres intersecting with our vector.
+    V12 = v_sub(C2, C1),
+    R12 = R2 - R1,
+    V12V = v_scalar(V12, V),
+    Q = V12V * V12V,
+    VV = v_mod_2(V),
+    V12V12 = v_mod_2(V12),
+    A2 = Q + VV * (R12 * R12 - V12V12),
+    C1V = v_scalar(C1, V),
+    C1V12 = v_scalar(C1, V12),
+    A1 = C1V * V12V + VV * (R1 * R12 - C1V12),
+    C1C1 = v_mod_2(C1),
+    A0 = C1V * C1V + VV * (R1 * R1 - C1C1),
+    Alphas = jdlib_realline:intersection(jdlib_math:solve_square_inequation({A2, 2 * A1, A0}),
+                                         jdlib_realline:interval(0, true, 1, true)),
+
+    % The result can be only interval or empty.
+    case Alphas of
+        {interval, {Alpha1, true}, {Alpha2, true}} ->
+
+            % Try to find extremum points.
+            Extrs = jdlib_math:solve_square_equation({A2 * (Q - A2),
+                                                      2 * A1 * (Q - A2),
+                                                      Q * A0 - A1 * A1}),
+            Extrs2 = lists:filter(fun(X) -> (X >= Alpha1) andalso (X =< Alpha2) end,
+                                  jdlib_utils:list(Extrs)),
+            All_Alphas = lists:append([Alpha1, Alpha2], Extrs2),
+
+            % Find t values by alphas.
+            SC_Fun = fun(A) -> v_scalar(v_add_mul(C1, V12, A), V) end,
+            SD_Fun = fun(A) -> math:sqrt(A2 * A * A + 2 * A1 * A + A0) end,
+            T1_Fun = fun(A) -> (SC_Fun(A) - SD_Fun(A)) / VV end,
+            T2_Fun = fun(A) -> (SC_Fun(A) + SD_Fun(A)) / VV end,
+            [
+                lists:min(lists:map(T1_Fun, All_Alphas)),
+                lists:max(lists:map(T2_Fun, All_Alphas))
+            ];
+
+        empty ->
+            []
+    end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec spheres_nest_line_intersection_t(SN :: spheres_nest(), L :: line()) -> [number()].
+%% @doc
+%% Find T parameters of intersection spheres nest and line.
+spheres_nest_line_intersection_t(#spheres_nest{s1 = #sphere{c = C1, r = R1},
+                                               s2 = #sphere{c = C2, r = R2}},
+                                 #line{p = P, v = V}) ->
+    spheres_nest_vector_intersection_t(spheres_nest_make(sphere_make(v_sub(C1, P), R1),
+                                                         sphere_make(v_sub(C2, P), R2)), V).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec spheres_nest_line_intersection(SN :: spheres_nest(), L :: line()) -> [vector()].
+%% @doc
+%% Find spheres nest and line intersection.
+spheres_nest_line_intersection(SN, #line{p = P, v = V} = L) ->
+    case spheres_nest_line_intersection_t(SN, L) of
         [] ->
             [];
         [T1, T2] ->
