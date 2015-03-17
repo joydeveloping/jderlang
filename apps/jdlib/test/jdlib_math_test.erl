@@ -12,7 +12,7 @@
 % Functions import.
 -import(jdlib_math,
         [is_lt/3, is_lt/2, is_gt/3, is_gt/2, is_eq/3, is_eq/2, is_le/3, is_le/2, is_ge/3, is_ge/2,
-         add/2, sub/2, mul/2, dvs/2,
+         add/2, sub/2, mul/2, dvs/2, polynomial/2,
          fraction/1,
          solve_linear_equation/1, solve_linear_inequation/1,
          solve_square_equation/1, solve_square_inequation/1]).
@@ -21,38 +21,17 @@
 % Tests.
 %---------------------------------------------------------------------------------------------------
 
--spec add_test() -> ok.
+-spec operations_test() -> ok.
 %% @doc
-%% Function add test.
-add_test() ->
+%% Functions add, sub, mul, dvs, polynomial test.
+operations_test() ->
     ?assertEqual(10, add(3, 7)),
-    ok.
-
-%---------------------------------------------------------------------------------------------------
-
--spec sub_test() -> ok.
-%% @doc
-%% Function sub test.
-sub_test() ->
     ?assertEqual(3, sub(10, 7)),
-    ok.
-
-%---------------------------------------------------------------------------------------------------
-
--spec mul_test() -> ok.
-%% @doc
-%% Function mul test.
-mul_test() ->
     ?assertEqual(24, mul(6, 4)),
-    ok.
-
-%---------------------------------------------------------------------------------------------------
-
--spec dvs_test() -> ok.
-%% @doc
-%% Function dvs test.
-dvs_test() ->
     ?assert(is_eq(4, dvs(24, 6))),
+    ?assertEqual(0, polynomial([], 100)),
+    ?assertEqual(5, polynomial([5], 100)),
+    ?assertEqual(24, polynomial([2, 3, 4], 2)),
     ok.
 
 %---------------------------------------------------------------------------------------------------
