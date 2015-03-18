@@ -8,8 +8,10 @@
 
 % Export.
 -export([is_lt/3, is_lt/2, is_gt/3, is_gt/2, is_eq/3, is_eq/2, is_le/3, is_le/2, is_ge/3, is_ge/2,
-         add/2, sub/2, mul/2, dvs/2,
-         fraction/1]).
+         add/2, sub/2, mul/2, dvs/2, polynomial/2,
+         fraction/1,
+         solve_linear_equation/1, solve_linear_inequation/1,
+         solve_square_equation/1, solve_square_inequation/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -135,6 +137,18 @@ dvs(X, Y) ->
     X / Y.
 
 %---------------------------------------------------------------------------------------------------
+
+-spec polynomial(P :: [number()], X :: number()) -> number().
+%% @doc
+%% Calculate polynomial function.
+polynomial([], _) ->
+    0;
+polynomial([K], _) ->
+    K;
+polynomial([H | T], X) ->
+    X * polynomial(T, X) + H.
+
+%---------------------------------------------------------------------------------------------------
 % Other functions.
 %---------------------------------------------------------------------------------------------------
 
@@ -143,6 +157,110 @@ dvs(X, Y) ->
 %% Fraction of number.
 fraction(X) ->
     X - trunc(X).
+
+%---------------------------------------------------------------------------------------------------
+% Linear and square equation and inequation.
+%---------------------------------------------------------------------------------------------------
+
+-spec solve_linear_equation({A :: number(), B :: number()}) -> jdlib_realline:locus().
+%% @doc
+%% Solve linear equation Ax + B = 0.
+solve_linear_equation({A, B}) ->
+    if
+        A /= 0 ->
+            jdlib_realline:point(-B / A);
+        B == 0 ->
+            line;
+        true ->
+            empty
+    end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec solve_linear_inequation({A :: number(), B :: number()}) -> jdlib_realline:locus().
+%% @doc
+%% Solve linear inequation Ax + B >= 0.
+solve_linear_inequation({A, B}) ->
+    if
+        A /= 0 ->
+            jdlib_realline:ray
+            (
+                -B / A,
+                true,
+                if
+                    A > 0 ->
+                        pos;
+                    true ->
+                        neg
+                end
+            );
+        B >= 0 ->
+            line;
+        true ->
+            empty
+    end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec solve_square_equation({A :: number(), B :: number()}) -> jdlib_realline:locus().
+%% @doc
+%% Solve square equation Ax^2 + Bx + C = 0.
+solve_square_equation({A, B, C}) ->
+    if
+        A /= 0 ->
+            D = B * B - 4 * A * C,
+            if
+                D > 0 ->
+                    SD = math:sqrt(D),
+                    lists:sort([(-B - SD) / (2 * A), (-B + SD) / (2 * A)]);
+                D < 0 ->
+                    empty;
+                true ->
+                    -B / (2 * A)
+            end;
+        true ->
+            solve_linear_equation({B, C})
+    end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec solve_square_inequation({A :: number(),
+                               B :: number(),
+                               C :: number()}) -> jdlib_realline:locus().
+%% @doc
+%% Solve square inequation Ax^2 + Bx + C >= 0.
+solve_square_inequation({A, B, C} = EQ) ->
+    if
+        A /= 0 ->
+            case solve_square_equation(EQ) of
+                [X1, X2] ->
+                    if
+                        A > 0 ->
+                            [
+                                jdlib_realline:ray(X1, true, neg),
+                                jdlib_realline:ray(X2, true, pos)
+                            ];
+                        true ->
+                            jdlib_realline:interval(X1, true, X2, true)
+                    end;
+                X when is_number(X) ->
+                    if
+                        A > 0 ->
+                            line;
+                        true ->
+                            X
+                    end;
+                empty ->
+                    if
+                        A > 0 ->
+                            line;
+                        true ->
+                            empty
+                    end
+            end;
+        true ->
+            solve_linear_inequation({B, C})
+    end.
 
 %---------------------------------------------------------------------------------------------------
 
