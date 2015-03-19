@@ -1,7 +1,7 @@
 %% @doc
 %% Combinatirics functions.
 %%
-%% @author Alexey Rybaov
+%% @author Alexey Rybakov
 
 % Module name.
 -module(jdlib_comb).
@@ -20,6 +20,12 @@
 -spec c(K :: integer(), N :: integer()) -> integer().
 %% @doc
 %% C(k, n).
+c(K, N) when (K < 0) orelse (N < 0) orelse (K > N) ->
+    0;
+c(0, _) ->
+    1;
+c(K, N) when K > N div 2 ->
+    c(N - K, N);
 c(K, N) ->
     Num = jdlib_lists:product(lists:seq(N, N - K + 1, -1)),
     Den = jdlib_lists:product(lists:seq(1, K)),
