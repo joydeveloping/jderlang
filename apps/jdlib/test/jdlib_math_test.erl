@@ -12,7 +12,7 @@
 % Functions import.
 -import(jdlib_math,
         [is_lt/3, is_lt/2, is_gt/3, is_gt/2, is_eq/3, is_eq/2, is_le/3, is_le/2, is_ge/3, is_ge/2,
-         add/2, sub/2, mul/2, dvs/2, polynomial/2,
+         add/2, sub/2, mul/2, dvs/2, npow/2, polynomial/2,
          fraction/1,
          solve_linear_equation/1, solve_linear_inequation/1,
          solve_square_equation/1, solve_square_inequation/1]).
@@ -32,6 +32,8 @@ operations_test() ->
     ?assertEqual(0, polynomial([], 100)),
     ?assertEqual(5, polynomial([5], 100)),
     ?assertEqual(24, polynomial([2, 3, 4], 2)),
+    ?assertThrow({badarg, _}, npow(5, 4.5)),
+    ?assertEqual([8, 1, 4, 1, 0], [npow(2, 3), npow(1, 5), npow(4, 1), npow(4, 0), npow(0, 0)]),
     ok.
 
 %---------------------------------------------------------------------------------------------------

@@ -8,7 +8,7 @@
 
 % Export.
 -export([is_lt/3, is_lt/2, is_gt/3, is_gt/2, is_eq/3, is_eq/2, is_le/3, is_le/2, is_ge/3, is_ge/2,
-         add/2, sub/2, mul/2, dvs/2, polynomial/2,
+         add/2, sub/2, mul/2, dvs/2, npow/2, polynomial/2,
          fraction/1,
          solve_linear_equation/1, solve_linear_inequation/1,
          solve_square_equation/1, solve_square_inequation/1]).
@@ -135,6 +135,23 @@ mul(X, Y) ->
 %% Division.
 dvs(X, Y) ->
     X / Y.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec npow(X :: number(), N :: integer()) -> number().
+%% @doc
+%% Natural power.
+npow(_, N) when ((not is_integer(N)) orelse (N < 0)) ->
+    throw({badarg, N});
+npow(X, N) ->
+    if
+        X == 0 ->
+            0;
+        N == 0 ->
+            1;
+        true ->
+            X * npow(X, N - 1)
+    end.
 
 %---------------------------------------------------------------------------------------------------
 
