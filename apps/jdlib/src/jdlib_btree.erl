@@ -8,7 +8,8 @@
 
 % Export.
 -export([init/3, init/1, data/1, left/1, right/1,
-         insert/3, insert/2, is_in/3, is_in/2]).
+         insert/3, insert/2, is_in/3, is_in/2,
+         to_list/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -131,6 +132,18 @@ is_in(#btree{data = D, left = L, right = R}, Data, Is_Gt_Fun) ->
 %% Check if data is in binary tree.
 is_in(T, Data) ->
     is_in(T, Data, fun(X, Y) -> X > Y end).
+
+%---------------------------------------------------------------------------------------------------
+% Other functions.
+%---------------------------------------------------------------------------------------------------
+
+-spec to_list(T :: btree()) -> [data()].
+%% @doc
+%% Convert to list of tree nodes data (in sorted order).
+to_list(null) ->
+    [];
+to_list(#btree{data = D, left = L, right = R}) ->
+    lists:append(to_list(L), [D | to_list(R)]).
 
 %---------------------------------------------------------------------------------------------------
 
