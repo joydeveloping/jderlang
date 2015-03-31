@@ -12,8 +12,10 @@
 % Functions import.
 -import(jdlib_btree,
         [init/3, init/1, data/1, left/1, right/1,
+         height/1,
          insert/3, insert/2, is_in/3, is_in/2,
-         to_list/1]).
+         to_list/1,
+         map/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -37,7 +39,10 @@ insert_test() ->
     T2 = insert(T1, b),
     T3 = insert(T2, d),
     T4 = insert(T3, a),
+    MT = map(T4, fun(X) -> [X] end),
     ?assertEqual([a, b, c, d], to_list(T4)),
+    ?assertEqual([[a], [b], [c], [d]], to_list(MT)),
+    ?assertEqual(3, height(T4)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

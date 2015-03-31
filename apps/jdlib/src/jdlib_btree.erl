@@ -8,8 +8,10 @@
 
 % Export.
 -export([init/3, init/1, data/1, left/1, right/1,
+         height/1,
          insert/3, insert/2, is_in/3, is_in/2,
-         to_list/1]).
+         to_list/1,
+         map/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -37,7 +39,7 @@
 -type btree() :: #btree{} | null.
 
 %---------------------------------------------------------------------------------------------------
-% Create and accessfFunctions.
+% Create and access functions.
 %---------------------------------------------------------------------------------------------------
 
 -spec init(D :: data(), L :: btree(), R :: btree()) -> btree().
@@ -77,6 +79,18 @@ left(#btree{left = L}) ->
 %% Get right subtree.
 right(#btree{right = R}) ->
     R.
+
+%---------------------------------------------------------------------------------------------------
+% Properties.
+%---------------------------------------------------------------------------------------------------
+
+-spec height(T :: btree()) -> integer().
+%% @doc
+%% Get height of binary tree.
+height(null) ->
+    0;
+height(#btree{left = L, right = R}) ->
+    1 + max(height(L), height(R)).
 
 %---------------------------------------------------------------------------------------------------
 % Insert and find functions.
@@ -144,6 +158,18 @@ to_list(null) ->
     [];
 to_list(#btree{data = D, left = L, right = R}) ->
     lists:append(to_list(L), [D | to_list(R)]).
+
+%---------------------------------------------------------------------------------------------------
+% Higher functions.
+%---------------------------------------------------------------------------------------------------
+
+-spec map(T :: btree(), Fun :: fun((data()) -> data())) -> btree().
+%% @doc
+%% Apply function to all data elements of binary tree.
+map(null, _) ->
+    null;
+map(#btree{data = D, left = L, right = R}, Fun) ->
+    init(Fun(D), map(L, Fun), map(R, Fun)).
 
 %---------------------------------------------------------------------------------------------------
 
