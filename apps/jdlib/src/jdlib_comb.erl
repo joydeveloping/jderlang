@@ -7,7 +7,7 @@
 -module(jdlib_comb).
 
 % Export.
--export([c/2]).
+-export([c/2, c2/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Types.
@@ -19,7 +19,8 @@
 
 -spec c(K :: integer(), N :: integer()) -> integer().
 %% @doc
-%% C(k, n).
+%% Number of ways to choose K elements from N elements set,
+%% disregarging order, if repetitions are not allowed.
 c(K, N) when (K < 0) orelse (N < 0) orelse (K > N) ->
     0;
 c(0, _) ->
@@ -30,6 +31,15 @@ c(K, N) ->
     Num = jdlib_lists:product(lists:seq(N, N - K + 1, -1)),
     Den = jdlib_lists:product(lists:seq(1, K)),
     Num div Den.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec c2(K :: integer(), N :: integer()) -> integer().
+%% @doc
+%% Number of ways to choose K elements from N elements set,
+%% disregarding order, if repetitions are allowed.
+c2(K, N) ->
+    c(K, N + K - 1).
 
 %---------------------------------------------------------------------------------------------------
 
