@@ -7,10 +7,19 @@
 -module(jdlib_time).
 
 % Functions export.
--export([days_dates_dist/2]).
+-export([today/0, days_dates_dist/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Functions.
+%---------------------------------------------------------------------------------------------------
+
+-spec today() -> calendar:date().
+%% @doc
+%% Get today date.
+today() ->
+    {D, _} = calendar:local_time(),
+    D.
+
 %---------------------------------------------------------------------------------------------------
 
 -spec days_dates_dist(Date_From :: calendar:date(), Date_To :: calendar:date()) -> integer().
