@@ -11,7 +11,7 @@
 
 % Functions import.
 -import(jdlib_time,
-        [today/0, days_dates_dist/2]).
+        [today/0, dates_days_dist/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Tests.
@@ -22,7 +22,7 @@
 %% Tests for dates.
 dates_test() ->
     D = today(),
-    ?assertEqual(0, days_dates_dist(D, D)),
+    ?assertEqual(0, dates_days_dist(D, D)),
     ok.
 
 %---------------------------------------------------------------------------------------------------

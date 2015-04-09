@@ -7,7 +7,7 @@
 -module(jdlib_time).
 
 % Functions export.
--export([today/0, days_dates_dist/2]).
+-export([today/0, dates_days_dist/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Functions.
@@ -22,10 +22,10 @@ today() ->
 
 %---------------------------------------------------------------------------------------------------
 
--spec days_dates_dist(Date_From :: calendar:date(), Date_To :: calendar:date()) -> integer().
+-spec dates_days_dist(Date_From :: calendar:date(), Date_To :: calendar:date()) -> integer().
 %% @doc
 %% Days count between two dates.
-days_dates_dist(Date_From, Date_To) ->
+dates_days_dist(Date_From, Date_To) ->
     calendar:date_to_gregorian_days(Date_To) - calendar:date_to_gregorian_days(Date_From).
 
 %---------------------------------------------------------------------------------------------------
