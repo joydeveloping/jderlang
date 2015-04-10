@@ -9,7 +9,7 @@
 % Export.
 -export([is_lt/3, is_lt/2, is_gt/3, is_gt/2, is_eq/3, is_eq/2, is_le/3, is_le/2, is_ge/3, is_ge/2,
          add/2, sub/2, mul/2, dvs/2, npow/2, polynomial/2,
-         fraction/1,
+         fraction/1, fact/1,
          solve_linear_equation/1, solve_linear_inequation/1,
          solve_square_equation/1, solve_square_inequation/1]).
 
@@ -174,6 +174,16 @@ polynomial([H | T], X) ->
 %% Fraction of number.
 fraction(X) ->
     X - trunc(X).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec fact(N :: integer()) -> integer().
+%% @doc
+%% Factorial.
+fact(1) ->
+    1;
+fact(N) when (is_integer(N) andalso (N > 1)) ->
+    N * fact(N - 1).
 
 %---------------------------------------------------------------------------------------------------
 % Linear and square equation and inequation.
