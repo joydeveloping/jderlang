@@ -8,10 +8,12 @@
 
 % Export.
 -export([v_x/1, v_y/1, v_z/1, v_i/2,
-         v_add/2, v_sub/2, v_neg/1, v_component_mul/2, v_component_dvs/2, v_component_inv/1,
+         v_add/2, v_sub/2, v_neg/1, v_scalar/2,
+         v_component_mul/2, v_component_dvs/2, v_component_inv/1,
          m_ij/3,
          m_add/2, m_sub/2, m_neg/1, m_component_mul/2, m_component_dvs/2, m_component_inv/1,
-         m_det/1, m_trans/1, m_2x2_dets_matrix/1, m_inv/1]).
+         m_det/1, m_trans/1, m_2x2_dets_matrix/1, m_inv/1,
+         m_mul_v/2]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -99,6 +101,14 @@ v_sub(V1, V2) ->
 %% Negate vector.
 v_neg(V) ->
     v_sub(0, V).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_scalar(V1 :: vector(), V2 :: vector()) -> number().
+%% @doc
+%% Scalar multiplication.
+v_scalar([X1, Y1, Z1], [X2, Y2, Z2]) ->
+    X1 * X2 + Y1 * Y2 + Z1 * Z2.
 
 %---------------------------------------------------------------------------------------------------
 
@@ -266,6 +276,14 @@ m_inv(M) ->
             S = [[1, -1, 1], [-1, 1, -1], [1, -1, 1]],
             m_component_dvs(m_component_mul(Dets, S), D)
     end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec m_mul_v(M :: matrix(), V :: vector()) -> vector().
+%% @doc
+%% Multiplicate matrix on vector.
+m_mul_v([V1, V2, V3], V) ->
+    [v_scalar(V1, V), v_scalar(V2, V), v_scalar(V3, V)].
 
 %---------------------------------------------------------------------------------------------------
 
