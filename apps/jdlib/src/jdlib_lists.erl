@@ -8,9 +8,10 @@
 
 % Export.
 -export([head/1, tail/1, last/1, init/1,
-         is_null/1, take/2, drop/2, product/1, minmax/1, duplicate_list/2,
+         is_null/1, take/2, drop/2, duplicate_list/2,
          foldl_1/2, foldr_1/2, adj_pairs_map/2,
-         count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2]).
+         count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2,
+         product/1, minmax/1, add/2, sub/2, neg/1, mul/2, square/1, dvs/2, inv/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Types.
@@ -18,6 +19,9 @@
 
 % Types export.
 -export_type([sorted_histogram/0]).
+
+% List of numbers.
+-type nlist() :: [number()].
 
 % Sorted histogram.
 -type sorted_histogram() :: [{term(), integer()}].
@@ -101,43 +105,6 @@ drop(L, N) when (length(L) =< N) ->
 drop(L, N) ->
     {_, L2} = lists:split(N, L),
     L2.
-
-%---------------------------------------------------------------------------------------------------
-
--spec product(L :: [number()]) -> number().
-%% @doc
-%% Multiplicate all elements of list.
-product([]) ->
-    1;
-product(L) ->
-    foldl_1(fun jdlib_math:mul/2, L).
-
-%---------------------------------------------------------------------------------------------------
-
--spec minmax(L :: [number()]) -> {number(), number()}.
-%% @doc
-%% Simultaneous search minimum and maximum elements of the list.
-minmax([]) ->
-    throw({badarg, []});
-minmax([H | T]) ->
-    minmax(T, {H, H}).
-
--spec minmax(L :: [number()], {number(), number()}) -> {number(), number()}.
-%% @doc
-%% Simultaneous search minimum and maximum elements of the list.
-minmax([], R) ->
-    R;
-minmax([H], {Min, Max}) ->
-    {min(Min, H), max(Max, H)};
-minmax([H1, H2 | T], {Min, Max}) ->
-    R =
-        if
-            H1 < H2 ->
-                {min(Min, H1), max(Max, H2)};
-            true ->
-                {min(Min, H2), max(Max, H1)}
-        end,
-    minmax(T, R).
 
 %---------------------------------------------------------------------------------------------------
 
@@ -292,6 +259,101 @@ apply_to_any_pair(H, [H2 | T], R, F) ->
         false ->
             apply_to_any_pair(H, T, [H2 | R], F)
     end.
+
+%---------------------------------------------------------------------------------------------------
+% Mathematical functions on lists.
+%---------------------------------------------------------------------------------------------------
+
+-spec product(L :: nlist()) -> number().
+%% @doc
+%% Multiplicate all elements of list.
+product([]) ->
+    1;
+product(L) ->
+    foldl_1(fun jdlib_math:mul/2, L).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec minmax(L :: nlist()) -> {number(), number()}.
+%% @doc
+%% Simultaneous search minimum and maximum elements of the list.
+minmax([]) ->
+    throw({badarg, []});
+minmax([H | T]) ->
+    minmax(T, {H, H}).
+
+-spec minmax(L :: nlist(), {number(), number()}) -> {number(), number()}.
+%% @doc
+%% Simultaneous search minimum and maximum elements of the list.
+minmax([], R) ->
+    R;
+minmax([H], {Min, Max}) ->
+    {min(Min, H), max(Max, H)};
+minmax([H1, H2 | T], {Min, Max}) ->
+    R =
+        if
+            H1 < H2 ->
+                {min(Min, H1), max(Max, H2)};
+            true ->
+                {min(Min, H2), max(Max, H1)}
+        end,
+    minmax(T, R).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec add(L1 :: nlist() | number(), L2 :: nlist() | number()) -> nlist().
+%% @doc
+%% Lists addition.
+add(L1, L2) when (is_list(L1) andalso is_list(L2)) ->
+    lists:zipwith(fun jdlib_math:add/2, L1, L2).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec sub(L1 :: nlist() | number(), L2 :: nlist() | number()) -> nlist().
+%% @doc
+%% Lists substraction.
+sub(L1, L2) when (is_list(L1) andalso is_list(L2)) ->
+    lists:zipwith(fun jdlib_math:sub/2, L1, L2).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec neg(L :: nlist() | number()) -> nlist().
+%% @doc
+%% List negate.
+neg(L) when is_list(L) ->
+    lists:map(fun(X) -> -X end, L).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec mul(L1 :: nlist() | number(), L2 :: nlist() | number()) -> nlist().
+%% @doc
+%% Lists multiplication.
+mul(L1, L2) when (is_list(L1) andalso is_list(L2)) ->
+    lists:zipwith(fun jdlib_math:mul/2, L1, L2).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec square(L :: nlist() | number()) -> nlist().
+%% @doc
+%% Square of list.
+square(L) when is_list(L) ->
+    mul(L, L).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec dvs(L1 :: nlist() | number(), L2 :: nlist() | number()) -> nlist().
+%% @doc
+%% Lists division.
+dvs(L1, L2) when (is_list(L1) andalso is_list(L2)) ->
+    lists:zipwith(fun jdlib_math:dvs/2, L1, L2).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec inv(L :: nlist() | number()) -> nlist().
+%% @doc
+%% List inversion.
+inv(L) when is_list(L) ->
+    lists:map(fun(X) -> 1 / X end, L).
 
 %---------------------------------------------------------------------------------------------------
 
