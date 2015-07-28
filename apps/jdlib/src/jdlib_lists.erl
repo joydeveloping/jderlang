@@ -11,7 +11,7 @@
          is_null/1, take/2, drop/2, duplicate_list/2,
          foldl_1/2, foldr_1/2, adj_pairs_map/2,
          count/2, sorted_histogram/1, merge_sorted_histograms/2, apply_to_any_pair/2,
-         product/1, minmax/1, add/2, sub/2, neg/1, mul/2, square/1, dvs/2, inv/1]).
+         product/1, minmax/1, add/2, sub/2, neg/1, mul/2, square/1, dvs/2, inv/1, log/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Types.
@@ -354,6 +354,14 @@ dvs(L1, L2) when (is_list(L1) andalso is_list(L2)) ->
 %% List inversion.
 inv(L) when is_list(L) ->
     lists:map(fun(X) -> 1 / X end, L).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec log(L :: nlist() | number()) -> nlist().
+%% @doc
+%% Log of all elements of list.
+log(L) when is_list(L) ->
+    lists:map(fun math:log/1, L).
 
 %---------------------------------------------------------------------------------------------------
 
