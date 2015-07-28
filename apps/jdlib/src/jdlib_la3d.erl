@@ -7,7 +7,7 @@
 -module(jdlib_la3d).
 
 % Export.
--export([v_x/1, v_y/1, v_z/1,
+-export([v_x/1, v_y/1, v_z/1, v_i/2,
          v_add/2, v_sub/2, v_neg/1, v_mul/2, v_dvs/2, v_inv/1]).
 
 %---------------------------------------------------------------------------------------------------
@@ -22,7 +22,7 @@
 -export_type([vector/0]).
 
 % Vector.
--type vector() :: {number(), number(), number()}.
+-type vector() :: [number()].
 
 %---------------------------------------------------------------------------------------------------
 % Vector functions.
@@ -31,7 +31,7 @@
 -spec v_x(V :: vector()) -> number().
 %% @doc
 %% X component of vector.
-v_x({X, _, _}) ->
+v_x([X, _, _]) ->
     X.
 
 %---------------------------------------------------------------------------------------------------
@@ -39,7 +39,7 @@ v_x({X, _, _}) ->
 -spec v_y(V :: vector()) -> number().
 %% @doc
 %% Y component of vector.
-v_y({_, Y, _}) ->
+v_y([_, Y, _]) ->
     Y.
 
 %---------------------------------------------------------------------------------------------------
@@ -47,20 +47,28 @@ v_y({_, Y, _}) ->
 -spec v_z(V :: vector()) -> number().
 %% @doc
 %% Z component of vector.
-v_z({_, _, Z}) ->
+v_z([_, _, Z]) ->
     Z.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec v_i(V :: vector(), integer()) -> number().
+%% @doc
+%% Component of vector.
+v_i(V, I) ->
+    lists:nth(I, V).
 
 %---------------------------------------------------------------------------------------------------
 
 -spec v_add(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
 %% @doc
 %% Vectors addition.
-v_add({X1, Y1, Z1}, {X2, Y2, Z2}) ->
-    {X1 + X2, Y1 + Y2, Z1 + Z2};
-v_add({X1, Y1, Z1}, V2) ->
-    {X1 + V2, Y1 + V2, Z1 + V2};
-v_add(V1, {X2, Y2, Z2}) ->
-    {V1 + X2, V1 + Y2, V1 + Z2};
+v_add([X1, Y1, Z1], [X2, Y2, Z2]) ->
+    [X1 + X2, Y1 + Y2, Z1 + Z2];
+v_add([X1, Y1, Z1], V2) ->
+    [X1 + V2, Y1 + V2, Z1 + V2];
+v_add(V1, [X2, Y2, Z2]) ->
+    [V1 + X2, V1 + Y2, V1 + Z2];
 v_add(V1, V2) ->
     V1 + V2.
 
@@ -69,12 +77,12 @@ v_add(V1, V2) ->
 -spec v_sub(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
 %% @doc
 %% Vectors subtraction.
-v_sub({X1, Y1, Z1}, {X2, Y2, Z2}) ->
-    {X1 - X2, Y1 - Y2, Z1 - Z2};
-v_sub({X1, Y1, Z1}, V2) ->
-    {X1 - V2, Y1 - V2, Z1 - V2};
-v_sub(V1, {X2, Y2, Z2}) ->
-    {V1 - X2, V1 - Y2, V1 - Z2};
+v_sub([X1, Y1, Z1], [X2, Y2, Z2]) ->
+    [X1 - X2, Y1 - Y2, Z1 - Z2];
+v_sub([X1, Y1, Z1], V2) ->
+    [X1 - V2, Y1 - V2, Z1 - V2];
+v_sub(V1, [X2, Y2, Z2]) ->
+    [V1 - X2, V1 - Y2, V1 - Z2];
 v_sub(V1, V2) ->
     V1 - V2.
 
@@ -91,12 +99,12 @@ v_neg(V) ->
 -spec v_mul(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
 %% @doc
 %% Vectors componentwise multiplication.
-v_mul({X1, Y1, Z1}, {X2, Y2, Z2}) ->
-    {X1 * X2, Y1 * Y2, Z1 * Z2};
-v_mul({X1, Y1, Z1}, V2) ->
-    {X1 * V2, Y1 * V2, Z1 * V2};
-v_mul(V1, {X2, Y2, Z2}) ->
-    {V1 * X2, V1 * Y2, V1 * Z2};
+v_mul([X1, Y1, Z1], [X2, Y2, Z2]) ->
+    [X1 * X2, Y1 * Y2, Z1 * Z2];
+v_mul([X1, Y1, Z1], V2) ->
+    [X1 * V2, Y1 * V2, Z1 * V2];
+v_mul(V1, [X2, Y2, Z2]) ->
+    [V1 * X2, V1 * Y2, V1 * Z2];
 v_mul(V1, V2) ->
     V1 * V2.
 
@@ -105,12 +113,12 @@ v_mul(V1, V2) ->
 -spec v_dvs(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
 %% @doc
 %% Vectors componentwise division.
-v_dvs({X1, Y1, Z1}, {X2, Y2, Z2}) ->
-    {X1 / X2, Y1 / Y2, Z1 / Z2};
-v_dvs({X1, Y1, Z1}, V2) ->
-    {X1 / V2, Y1 / V2, Z1 / V2};
-v_dvs(V1, {X2, Y2, Z2}) ->
-    {V1 / X2, V1 / Y2, V1 / Z2};
+v_dvs([X1, Y1, Z1], [X2, Y2, Z2]) ->
+    [X1 / X2, Y1 / Y2, Z1 / Z2];
+v_dvs([X1, Y1, Z1], V2) ->
+    [X1 / V2, Y1 / V2, Z1 / V2];
+v_dvs(V1, [X2, Y2, Z2]) ->
+    [V1 / X2, V1 / Y2, V1 / Z2];
 v_dvs(V1, V2) ->
     V1 / V2.
 
