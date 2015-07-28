@@ -8,9 +8,10 @@
 
 % Export.
 -export([v_x/1, v_y/1, v_z/1, v_i/2,
-         v_add/2, v_sub/2, v_neg/1, v_mul/2, v_dvs/2, v_inv/1,
+         v_add/2, v_sub/2, v_neg/1, v_component_mul/2, v_component_dvs/2, v_component_inv/1,
          m_ij/3,
-         m_add/2, m_sub/2, m_neg/1, m_mul/2, m_dvs/2, m_inv/1]).
+         m_add/2, m_sub/2, m_neg/1, m_component_mul/2, m_component_dvs/2, m_component_inv/1,
+         m_det/1, m_trans/1, m_2x2_dets_matrix/1, m_inv/1]).
 
 %---------------------------------------------------------------------------------------------------
 % Constants and macroses.
@@ -101,39 +102,39 @@ v_neg(V) ->
 
 %---------------------------------------------------------------------------------------------------
 
--spec v_mul(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
+-spec v_component_mul(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
 %% @doc
 %% Vectors componentwise multiplication.
-v_mul([X1, Y1, Z1], [X2, Y2, Z2]) ->
+v_component_mul([X1, Y1, Z1], [X2, Y2, Z2]) ->
     [X1 * X2, Y1 * Y2, Z1 * Z2];
-v_mul([X1, Y1, Z1], V2) ->
+v_component_mul([X1, Y1, Z1], V2) ->
     [X1 * V2, Y1 * V2, Z1 * V2];
-v_mul(V1, [_, _, _] = V2) ->
-    v_mul(V2, V1);
-v_mul(V1, V2) ->
+v_component_mul(V1, [_, _, _] = V2) ->
+    v_component_mul(V2, V1);
+v_component_mul(V1, V2) ->
     V1 * V2.
 
 %---------------------------------------------------------------------------------------------------
 
--spec v_dvs(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
+-spec v_component_dvs(V1 :: vector() | number(), V2 :: vector() | number()) -> vector() | number().
 %% @doc
 %% Vectors componentwise division.
-v_dvs([X1, Y1, Z1], [X2, Y2, Z2]) ->
+v_component_dvs([X1, Y1, Z1], [X2, Y2, Z2]) ->
     [X1 / X2, Y1 / Y2, Z1 / Z2];
-v_dvs([X1, Y1, Z1], V2) ->
+v_component_dvs([X1, Y1, Z1], V2) ->
     [X1 / V2, Y1 / V2, Z1 / V2];
-v_dvs(V1, [X2, Y2, Z2]) ->
+v_component_dvs(V1, [X2, Y2, Z2]) ->
     [V1 / X2, V1 / Y2, V1 / Z2];
-v_dvs(V1, V2) ->
+v_component_dvs(V1, V2) ->
     V1 / V2.
 
 %---------------------------------------------------------------------------------------------------
 
--spec v_inv(V :: vector()) -> vector().
+-spec v_component_inv(V :: vector()) -> vector().
 %% @doc
-%% Invert vector.
-v_inv(V) ->
-    v_dvs(1, V).
+%% Componentwise invert vector.
+v_component_inv(V) ->
+    v_component_dvs(1, V).
 
 %---------------------------------------------------------------------------------------------------
 % Matrix functions.
@@ -175,47 +176,96 @@ m_sub(M1, M2) ->
 
 %---------------------------------------------------------------------------------------------------
 
--spec m_neg(V :: vector()) -> vector().
+-spec m_neg(M :: matrix()) -> matrix().
 %% @doc
 %% Negate matrix.
-m_neg(V) ->
-    m_sub(0, V).
+m_neg(M) ->
+    m_sub(0, M).
 
 %---------------------------------------------------------------------------------------------------
 
--spec m_mul(M1 :: matrix(), M2 :: matrix()) -> matrix().
+-spec m_component_mul(M1 :: matrix(), M2 :: matrix()) -> matrix().
 %% @doc
 %% Matrices componentwise multiplication.
-m_mul([V11, V12, V13], [V21, V22, V23]) ->
-    [v_mul(V11, V21), v_mul(V12, V22), v_mul(V13, V23)];
-m_mul([V11, V12, V13], M2) ->
-    [v_mul(V11, M2), v_mul(V12, M2), v_mul(V13, M2)];
-m_mul(M1, [_, _, _] = M2) ->
-    m_mul(M2, M1);
-m_mul(M1, M2) ->
+m_component_mul([V11, V12, V13], [V21, V22, V23]) ->
+    [v_component_mul(V11, V21), v_component_mul(V12, V22), v_component_mul(V13, V23)];
+m_component_mul([V11, V12, V13], M2) ->
+    [v_component_mul(V11, M2), v_component_mul(V12, M2), v_component_mul(V13, M2)];
+m_component_mul(M1, [_, _, _] = M2) ->
+    m_component_mul(M2, M1);
+m_component_mul(M1, M2) ->
     M1 * M2.
 
 %---------------------------------------------------------------------------------------------------
 
--spec m_dvs(M1 :: matrix(), M2 :: matrix()) -> matrix().
+-spec m_component_dvs(M1 :: matrix(), M2 :: matrix()) -> matrix().
 %% @doc
 %% Matrices componentwise division.
-m_dvs([V11, V12, V13], [V21, V22, V23]) ->
-    [v_dvs(V11, V21), v_dvs(V12, V22), v_dvs(V13, V23)];
-m_dvs([V11, V12, V13], M2) ->
-    [v_dvs(V11, M2), v_dvs(V12, M2), v_dvs(V13, M2)];
-m_dvs(M1, [V21, V22, V23]) ->
-    [v_dvs(M1, V21), v_dvs(M1, V22), v_dvs(M1, V23)];
-m_dvs(M1, M2) ->
+m_component_dvs([V11, V12, V13], [V21, V22, V23]) ->
+    [v_component_dvs(V11, V21), v_component_dvs(V12, V22), v_component_dvs(V13, V23)];
+m_component_dvs([V11, V12, V13], M2) ->
+    [v_component_dvs(V11, M2), v_component_dvs(V12, M2), v_component_dvs(V13, M2)];
+m_component_dvs(M1, [V21, V22, V23]) ->
+    [v_component_dvs(M1, V21), v_component_dvs(M1, V22), v_component_dvs(M1, V23)];
+m_component_dvs(M1, M2) ->
     M1 / M2.
 
 %---------------------------------------------------------------------------------------------------
 
--spec m_inv(V :: vector()) -> vector().
+-spec m_component_inv(M :: matrix()) -> matrix().
+%% @doc
+%% Componentwisr invert matrix.
+m_component_inv(M) ->
+    m_component_dvs(1, M).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec m_det(M :: matrix()) -> number().
+%% @doc
+%% Matrix determinant.
+m_det([[A11, A12, A13], [A21, A22, A23], [A31, A32, A33]]) ->
+    A11 * ((A22 * A33) - (A23 * A32))
+    - A12 * ((A21 * A33) - (A23 * A31))
+    + A13 * ((A21 * A32) - (A22 * A31)).
+
+%---------------------------------------------------------------------------------------------------
+
+-spec m_trans(M :: matrix()) -> matrix().
+%% @doc
+%% Matrix transposition.
+m_trans([[A11, A12, A13], [A21, A22, A23], [A31, A32, A33]]) ->
+    [[A11, A21, A31], [A12, A22, A32], [A13, A23, A33]].
+
+%---------------------------------------------------------------------------------------------------
+
+-spec m_2x2_dets_matrix(M :: matrix()) -> matrix().
+%% @doc
+%% Matrix, containing dets of matrices minors.
+m_2x2_dets_matrix([[A11, A12, A13], [A21, A22, A23], [A31, A32, A33]]) ->
+    [
+        [A22 * A33 - A23 * A32, A21 * A33 - A23 * A31, A21 * A32 - A22 * A31],
+        [A12 * A33 - A13 * A32, A11 * A33 - A13 * A31, A11 * A32 - A12 * A31],
+        [A12 * A23 - A13 * A22, A11 * A23 - A13 * A21, A11 * A22 - A12 * A21]
+    ].
+
+%---------------------------------------------------------------------------------------------------
+
+-spec m_inv(M :: matrix()) -> {ok, matrix()} | na.
 %% @doc
 %% Invert matrix.
-m_inv(V) ->
-    m_dvs(1, V).
+m_inv(M) ->
+    D = m_det(M),
+
+    % If determinant is zero matrix can not be inverted.
+    if
+        D == 0 ->
+            na;
+
+        true ->
+            Dets = m_2x2_dets_matrix(M),
+            S = [[1, -1, 1], [-1, 1, -1], [1, -1, 1]],
+            m_component_dvs(m_component_mul(Dets, S), D)
+    end.
 
 %---------------------------------------------------------------------------------------------------
 
