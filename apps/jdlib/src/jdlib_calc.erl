@@ -73,7 +73,7 @@ interpolation_ax_blogx_c_ddivx(L) ->
     N = length(X),
     Sum_Log = lists:sum(Log),
     Sum_Log2 = lists:sum(jdlib_lists:square(Log)),
-    Sum_LogdX = lists:sum(jdlib_lists:dvs(X, Log)),
+    Sum_LogdX = lists:sum(jdlib_lists:dvs(Log, X)),
     Sum_Xm1 = lists:sum(jdlib_lists:inv(X)),
     Sum_Xm2 = lists:sum(jdlib_lists:inv(jdlib_lists:square(X))),
     M = [[Sum_X2,   Sum_XLog,  Sum_X,   N        ],
