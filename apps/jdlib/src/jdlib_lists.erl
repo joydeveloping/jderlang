@@ -328,6 +328,10 @@ neg(L) when is_list(L) ->
 -spec mul(L1 :: nlist() | number(), L2 :: nlist() | number()) -> nlist().
 %% @doc
 %% Lists multiplication.
+mul(L1, V) when is_number(V) ->
+    mul(L1, lists:duplicate(length(L1), V));
+mul(V, L2) when is_number(V) ->
+    mul(lists:duplicate(length(L2), V), L2);
 mul(L1, L2) when (is_list(L1) andalso is_list(L2)) ->
     lists:zipwith(fun jdlib_math:mul/2, L1, L2).
 
@@ -344,6 +348,10 @@ square(L) when is_list(L) ->
 -spec dvs(L1 :: nlist() | number(), L2 :: nlist() | number()) -> nlist().
 %% @doc
 %% Lists division.
+dvs(L1, V) when is_number(V) ->
+    dvs(L1, lists:duplicate(length(L1), V));
+dvs(V, L2) when is_number(V) ->
+    dvs(lists:duplicate(length(L2), V), L2);
 dvs(L1, L2) when (is_list(L1) andalso is_list(L2)) ->
     lists:zipwith(fun jdlib_math:dvs/2, L1, L2).
 
