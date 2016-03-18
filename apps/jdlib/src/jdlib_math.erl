@@ -8,7 +8,7 @@
 
 % Export.
 -export([is_lt/3, is_lt/2, is_gt/3, is_gt/2, is_eq/3, is_eq/2, is_le/3, is_le/2, is_ge/3, is_ge/2,
-         add/2, sub/2, mul/2, dvs/2, npow/2, polynomial/2,
+         add/2, sub/2, mul/2, dvs/2, npow/2, ndigits/1, polynomial/2,
          fraction/1, fact/1,
          solve_linear_equation/1, solve_linear_inequation/1,
          solve_square_equation/1, solve_square_inequation/1]).
@@ -152,6 +152,16 @@ npow(X, N) ->
         true ->
             X * npow(X, N - 1)
     end.
+
+%---------------------------------------------------------------------------------------------------
+
+-spec ndigits(N :: number()) -> integer().
+%% @doc
+%% Digits count for natural number.
+ndigits(N) when (N < 10) ->
+    1;
+ndigits(N) ->
+    1 + ndigits(N div 10).
 
 %---------------------------------------------------------------------------------------------------
 
